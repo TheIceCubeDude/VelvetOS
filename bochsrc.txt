@@ -1,0 +1,4 @@
+vgaromimage: file=$BXSHARE/VGABIOS-lgpl-latest
+vga: extension=vbe
+floppya: 1_44=OS.bin, status=inserted
+boot: floppy
