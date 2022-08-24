@@ -84,5 +84,11 @@ getMemoryMap:
 
 prepGDT:
 	;; Set GDT values based on memory map
+	call .relocateGDT
 	jmp $
+	ret
+
+	.relocateGDT:
+	mov eax, nullSeg
+	
 	ret

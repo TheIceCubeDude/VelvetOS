@@ -3,6 +3,7 @@
 
 main:	
 	cli
+	
 	mov ax, 0
 	mov ds, ax
 	mov ss, ax
@@ -17,6 +18,7 @@ main:
 	pop dx
 	call loadBootloader
 	
+	call A20_enable
 	call mMap_prepareMemory
 	call VBE_enterGraphicsMode
 	jmp $
@@ -152,4 +154,6 @@ MBRData:
 bootUtils:
 	%include "bootloader/VBE.asm"
 	%include "bootloader/memory_map.asm"
-	times 2560-($-$$) db 0
+	%include "bootloader/A20.asm"
+	
+	times 3072-($-$$) db 0
