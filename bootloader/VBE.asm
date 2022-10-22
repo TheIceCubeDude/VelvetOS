@@ -2,6 +2,7 @@ VBE_enterGraphicsMode:
 	call getAvaliableModes
 	call findBestMode
 	call selectMode
+	call setFramebufferSegment
 	ret
 
 getAvaliableModes:	
@@ -200,11 +201,7 @@ selectMode:
 	
 	cmp ax, 0x004F
 	jne .err
-
-	;; This will work only on some BIOS's I think?
-	mov dx, .msg1
-	mov bl, 00000010b
-	call textPrint
+	
 	ret
 
 	.err:
@@ -221,8 +218,55 @@ selectMode:
 
 	.msg0: db "Could not load VBE mode, returned error code "
 	.msg0Status: db "X!", 0
+
+setFramebufferSegment:
+	;; Set base
+	mov ecx, dword [VBEModeInfoStruct.framebuffer]
+	;; Load low 16 bits
+	mov word [framebufferSeg.base_low], cx
+	;; Load mid 8 bits and hi 8 bits
+	shr ecx, 16
+	mov byte [framebufferSeg.base_mid], cl
+	mov byte [framebufferSeg.base_hi], ch
+	;; Calculate size of framebuffer and set limit
+	mov edx, 0
+	mov eax, 0
+	mov ecx, 0
+	mov ax, word [VBEModeInfoStruct.height]
+	mov cx, word [VBEModeInfoStruct.pitch]
+	mul cx
+	;; Result is in DX:AX not EAX, so merge them into EDX
+	shl edx, 16
+	mov dx, ax
+	;; Calculate how many 4KB pages this is (4096 bytes not 4000)
+	mov eax, edx
+	mov edx, 0
+	mov ecx, 4096
+	div ecx
+	cmp edx, 0
+	jne .err
+	;; Load low 16 bits
+	mov [framebufferSeg.limit_low], ax
+	;; Pull bits 16-20 into top of al
+	mov ax, 0
+	shr eax, 12
+	mov dl, [framebufferSeg.flags]
+	;; Put top 4 bits of flags into low of dh
+	shl dx, 4
+	;; Load low 4 bits
+	mov dl, al
+	;;Shift flags back to give us flags + low 4 bits of limit
+	shr dx, 4
+	mov [framebufferSeg.flags], dl
+	ret
 	
-	.msg1: db "Successfully entered highest resolution VESA VBE mode!", 0
+	.err :
+	mov ax, 0
+	int 0x10
+	mov dx, .granularityNotDivisible
+	jmp textErr
+
+	.granularityNotDivisible: db "Framebuffer size is not divisible by 4KB (4096)", 0
 
 VBEInfoStruct:
 	.VBESig:	dd "VBE2"

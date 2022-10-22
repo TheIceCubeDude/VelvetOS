@@ -20,8 +20,16 @@ main:
 	
 	call A20_enable
 	call mMap_prepareMemory
+	call loadKernel
+
+	;; Once we enter VBE, BIOS printing will not work
+	;; pModeMsg is located in GDT structure file
+	mov dx, pModeMsg
+	mov bl, 00001111b
+	call textPrint
+	
 	call VBE_enterGraphicsMode
-	jmp $
+	jmp enterPMode
 
 loadBootloader:
 	mov ax, 0
@@ -53,6 +61,8 @@ loadBootloader:
 	.msg0Status: db "?", 0
 	.msg1: db "Bootloader succesfully loaded!", 0
 
+loadKernel:
+	ret
 enterVGAMode:
 	mov dx, .msg0
 	call textPrint
@@ -63,7 +73,7 @@ enterVGAMode:
 
 	;; Check if we are in desired mode
 	mov ah, 0xF
-	int 10h
+	int 0x10
 	cmp al, 0x12
 	jne .fail
 
@@ -81,6 +91,14 @@ enterVGAMode:
 	.msg0: db "Entering VGA mode 12h", 0
 	.msg1: db "Entered VGA mode 12h!", 0
 	.msg3: db "Could not enter VGA mode 12h. Will proceed with boot anyways.", 0
+
+enterPMode:
+	lgdt [gdtr]
+	mov eax, cr0
+	or al, 1
+	mov cr0, eax
+	;; Jump to beginning (offset 0) of kernel segment
+	jmp 8:0
 
 textErr:
 	;; DX  - String ptr
@@ -156,4 +174,4 @@ bootUtils:
 	%include "bootloader/memory_map.asm"
 	%include "bootloader/A20.asm"
 	
-	times 3072-($-$$) db 0
+	times 4096-($-$$) db 0
