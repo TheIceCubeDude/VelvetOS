@@ -8,11 +8,12 @@ main:
 	mov ds, ax
 	mov ss, ax
 	
-	;; Setup temporary stack
-	mov esp, 0x1000
+	;; Setup temporary stack (grows down)
+	mov esp, 0x7BFF
 	mov ebp, 0
 
 	;; Load services which require BIOS
+	push dx
 	push dx
 	call enterVGAMode
 	pop dx
@@ -20,7 +21,8 @@ main:
 	
 	call A20_enable
 	call mMap_prepareMemory
-	call loadKernel
+	pop dx
+	call mMap_loadKernel
 
 	;; Once we enter VBE, BIOS printing will not work
 	;; pModeMsg is located in GDT structure file
@@ -37,11 +39,12 @@ loadBootloader:
 	mov bx, 0x7E00
 	
 	;; DL is set by BIOS (drive no.)
+	;; Sector 1 is MBR, sector 2+ is bootloader (sector 0 isn't a thing)
 	mov ah, 2
 	mov al, [partition_1.size]
-	mov ch, [partition_1.startingCylinder]
-	mov cl, [partition_1.startingSector]
-	mov dh, [partition_1.startingHead]
+	mov ch, 0
+	mov cl, [partition_1.lba]
+	mov dh, 0
 	int 0x13
 
 	jc .err
@@ -61,8 +64,6 @@ loadBootloader:
 	.msg0Status: db "?", 0
 	.msg1: db "Bootloader succesfully loaded!", 0
 
-loadKernel:
-	ret
 enterVGAMode:
 	mov dx, .msg0
 	call textPrint
@@ -97,7 +98,7 @@ enterPMode:
 	mov eax, cr0
 	or al, 1
 	mov cr0, eax
-	;; Jump to beginning (offset 0) of kernel segment
+	;; Jump to beginning (offset 1) of kernel segment
 	jmp 8:0
 
 textErr:
@@ -173,5 +174,6 @@ bootUtils:
 	%include "bootloader/VBE.asm"
 	%include "bootloader/memory_map.asm"
 	%include "bootloader/A20.asm"
-	
+
 	times 4096-($-$$) db 0
+kernelHold:

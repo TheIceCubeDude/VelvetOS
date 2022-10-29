@@ -5,7 +5,139 @@ mMap_prepareMemory:
 	call getMemoryMap
 	call prepGDT
 	ret
+
+mMap_loadKernel:
+	;; Before anything, enter unreal mode to access >1MB of memory but still have BIOS
+	push dx
+	call .enterUnrealMode
+	;; We will load 4KB of the kernel at a time to kernelHold
+	;; After each 4KB framgment has been loaded, we copy it to kernelSeg
+	;; Firstly, find out how many fragments we will have
+	mov eax, kernelSize
+	mov edx, 0
+	mov ecx, 4096
+	div ecx
+	mov ebp, eax
+	dec ebp
+	;; Now begin the loop
+	pop dx 
+	mov ecx, 0
+	call .loadFragmentsLoop
+
+	mov dx, .kernelLoaded
+	mov bx, 00000010b
+	call textPrint
+	ret
+
+	.kernelLoaded: db "Kernel succesfully loaded from boot media!", 0
+
+	.loadFragmentsLoop:
+	;; Load fragment off disk to kernelHold
+	push dx
+	call .loadFragment
+	;; Now copy the fragment in kernelHold to final destination in kernelSeg
+	;; Firstly, get the base location
+        mov ah, [kernelSeg.base_hi]
+        mov al, [kernelSeg.base_mid]
+        shl eax, 16
+        mov ax, [kernelSeg.base_low]
+	;; Now calculate Counter * 4KB to give us offset
+	push eax
+	mov ebx, 4096
+	mov eax, ecx
+	mov edx, 0
+	mul ebx
+	mov ebx, eax
+	pop eax
+	;; Add the offset to the base location to give us final location
+	add eax, ebx
+	;; Now copy the 4KB over
+	push ecx
+	mov ecx, 0
+	call .copyFragment
+	pop ecx
+	pop dx
+	inc ecx
+	cmp ecx, ebp
+	jne .loadFragmentsLoop
+	ret
+
+	.copyFragment:
+	;; Will automatically use DS, which is in unreal mode and thus can access > 1MB
+	mov bl, [kernelHold + ecx]
+	mov [eax + ecx], bl
+	inc ecx
+	cmp ecx, 4096
+	jne .copyFragment
+	ret
+
+	.loadFragment:
+	push ecx
+	push dx
+	;; Calculate sectors
+	;; Firstly get how many sectors we have (8 sectors per fragment)
+	mov eax, ecx
+	mov edx, 0
+	mov ebx, 8
+	mul ebx
+	;; Then add our base offset
+	mov ebx, [partition_2.lba]
+	add eax, ebx
+	;; Prepare some registers for the interrupt
+	mov [dap.sectorCount], word 8
+	mov [dap.lba], eax
+	mov si, dap
+	pop dx
+	;; Call the interrupt
+	mov ah, 0x42	;Extended read from disk command
+	int 0x13
+	pop ecx
+	ret
+
+	.enterUnrealMode:	
+	;; Save segment
+	push ds
+	;; Load GDT and enter protected mode
+	lgdt [.unrealGDTR]
+	mov eax, cr0
+	or al, 1
+	mov cr0, eax
+	jmp $+2		;Stops 386/486 from crashing
+
+	;; Load segment
+	mov bx, 8
+	mov ds, bx
 	
+	;; Go back into real mode
+	and al, 0xFE
+	mov cr0, eax
+	
+	;; Reset segment
+	pop ds
+	ret
+	
+	.unrealGDT:
+	dq 0
+	dw 0xFFFF
+	dw 0
+	db 0
+	db 10010010b
+	db 11001111b
+	db 0
+	
+	.unrealGDTR:
+	dw .unrealGDTR - .unrealGDT - 1
+	dd .unrealGDT
+
+;; Disk Address Packet - used for BIOS extended read, which provides support for LBA
+dap:	
+	.size: 		db 0x10
+	.unused:	db 0
+	.sectorCount:	dw 8
+	.offset:	dw kernelHold
+	.segment:	dw 0
+	.lba:		dq 0
+
 getMemoryMap:
 	;; Get a map of high memory (>1 Meg) and set the GDT accordingly
 	;; EBP used as counter
@@ -111,9 +243,14 @@ prepGDT:
 	cmp ax, 0
 	je textErr
 
+	mov dx, .gdtPrepSuccess
+	mov bx, 00000010b
+	call textPrint
+
 	ret
 
 	.minRamErr: db "Not enough RAM!", 0
+	.gdtPrepSuccess: db "GDT successfully prepared with memory map!", 0
 
 	.findMem:
 	;; Check if we are at the end of the list
@@ -149,13 +286,13 @@ prepGDT:
 	cmp word [kernelSeg.limit_low], 0
 	jne .gdtCheck
 	;; Check this mem is big enough for kernelSeg
-	cmp eax, dword [kernelSize]
+	cmp eax, kernelSize
 	jge .setKernel
 	jmp .gdtCheck
 	
 	.setKernel:
-	sub eax, [kernelSize]
-	add ecx, [kernelSize]
+	sub eax, kernelSize
+	add ecx, kernelSize
 	;; Load low 16 bits
 	mov word [kernelSeg.base_low], cx
 	;; Load mid 8 bits and hi 8 bits
@@ -171,7 +308,7 @@ prepGDT:
 	;;Calculate 4kb pages
 	mov ecx, 4096
 	mov edx, 0
-	mov eax, dword [kernelSize]
+	mov eax, kernelSize
 	div ecx
 	cmp edx, 0
 	mov dx, .granularityNotDivisible
@@ -200,13 +337,13 @@ prepGDT:
 	cmp word [gdtSeg.limit_low], 0
 	jne .heapCheck
 	;;Check this mem is big enough for gdtSeg
-	cmp eax, dword [gdtSize]
+	cmp eax, gdtSize
 	jge .setGdt
 	jmp .heapCheck
 	
 	.setGdt: 
-	sub eax, [gdtSize]
-	add ecx, [gdtSize]
+	sub eax, gdtSize
+	add ecx, gdtSize
 	;; Load low 16 bits
 	mov word [gdtSeg.base_low], cx
 	;; Load mid 8 bits and hi 8 bits
@@ -218,7 +355,7 @@ prepGDT:
 	;;Load low 16 bits
 	push eax
 	push edx
-	mov eax, dword [gdtSize]
+	mov eax, gdtSize
 	mov [gdtSeg.limit_low], ax
 	;;Pull bits 16-20 into top of al
 	mov ax, 0
@@ -241,13 +378,13 @@ prepGDT:
 	cmp word [heapSeg.limit_low], 0
 	jne .stackCheck
 	;;Check this mem is big enough for heapSeg
-	cmp eax, dword [heapSize]
+	cmp eax, heapSize
 	jge .setHeap
 	jmp .stackCheck
 
 	.setHeap:
-	sub eax, [heapSize]
-	add ecx, [heapSize]
+	sub eax, heapSize
+	add ecx, heapSize
 	;; Load low 16 bits
 	mov word [heapSeg.base_low], cx
 	;; Load mid 8 bits hi 8 bits
@@ -263,7 +400,7 @@ prepGDT:
 	;;Calculate 4kb pages
 	mov ecx, 4096
 	mov edx, 0
-	mov eax, dword [heapSize]
+	mov eax, heapSize
 	div ecx
 	cmp edx, 0
 	mov dx, .granularityNotDivisible
@@ -294,13 +431,13 @@ prepGDT:
 	cmp word [stackSeg.limit_low], 0
 	jne .checkNextMem
 	;;Check this mem is big enough for stackSeg
-	cmp eax, dword [stackSize]
+	cmp eax, stackSize
 	jge .setStack
 	jmp .checkNextMem
 
 	.setStack:
-	sub eax, [stackSize]
-	add ecx, [stackSize]
+	sub eax, stackSize
+	add ecx, stackSize
 	;; Load low 16 bits
 	mov word [stackSeg.base_low], cx
 	;; Load mid 8 bits and hi 8 bits
@@ -316,7 +453,7 @@ prepGDT:
 	;;Calculate 4kb pages
 	mov ecx, 4096
 	mov edx, 0
-	mov eax, dword [stackSize]
+	mov eax, stackSize
 	div ecx
 	cmp edx, 0
 	mov dx, .granularityNotDivisible

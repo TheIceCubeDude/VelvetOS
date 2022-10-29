@@ -2,5 +2,6 @@ vgaromimage: file=$BXSHARE/VGABIOS-lgpl-latest
 vga: extension=vbe
 #romimage: file=bios.bin
 memory: guest=512, host=256
-floppya: 1_44=OS.bin, status=inserted
-boot: floppy
+
+ata0-master: type=disk, path="OS.img", mode=flat
+boot: disk

@@ -1,7 +1,7 @@
-%define codeAccess	10011010b
-%define noGranFlags	01000000b
-%define granFlags	11000000b
-%define dataAccess	10010010b
+codeAccess	equ	10011010b
+noGranFlags	equ	01000000b
+granFlags	equ	11000000b
+dataAccess	equ	10010010b
 
 nullSeg:	dq 0
 kernelSeg:
@@ -46,7 +46,8 @@ codeSegs: times 10 dq 0
 gdtr:
 	dw codeSegs - nullSeg - 1
 	dd nullSeg
-	
+
+%define gdtSize ((gdtr + 8) - nullSeg)
 pModeMsg: db "Entering VBE, loading GDT and jumping to 32 bit protected mode kernel...", 0
 
 
