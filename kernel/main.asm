@@ -1,7 +1,7 @@
 [BITS 32]
 [ORG 0]
 
-setupSegments:
+start:
 	mov esp, stackSize
 	;; Stack segment
 	mov bx, 0x10
@@ -15,7 +15,9 @@ setupSegments:
 	;; GDT segment
 	mov bx, 0x28
 	mov fs, bx
-	;; NOTE: scheduler should set GS to the current program segment
+	;; Code segment
+	mov bx, 0x30
+	mov gs, bx
 	
 main:
 	hlt

@@ -12,7 +12,7 @@ main:
 	mov esp, 0x7BFF
 	mov ebp, 0
 
-	;; Load services which require BIOS
+	;; Do bootloader-y stuff
 	push dx
 	push dx
 	call enterVGAMode
@@ -21,8 +21,10 @@ main:
 	
 	call A20_enable
 	call mMap_prepareMemory
+	call mMap_enterUnrealMode
 	pop dx
 	call mMap_loadKernel
+	call mMap_relocateGDT
 
 	;; Once we enter VBE, BIOS printing will not work
 	;; pModeMsg is located in GDT structure file
@@ -94,7 +96,12 @@ enterVGAMode:
 	.msg3: db "Could not enter VGA mode 12h. Will proceed with boot anyways.", 0
 
 enterPMode:
-	lgdt [gdtr]
+	mov ah, [gdtSeg.base_low]
+	mov al, [gdtSeg.base_mid]
+	shl eax, 16
+	mov ax, [gdtSeg.base_low]
+	lgdt [gdtr-nullSeg + eax]
+	
 	mov eax, cr0
 	or al, 1
 	mov cr0, eax
@@ -175,5 +182,5 @@ bootUtils:
 	%include "bootloader/memory_map.asm"
 	%include "bootloader/A20.asm"
 
-	times 4096-($-$$) db 0
+	times 4608-($-$$) db 0
 kernelHold:

@@ -6,13 +6,28 @@ mMap_prepareMemory:
 	call prepGDT
 	ret
 
+mMap_relocateGDT:
+	;; This will copy the GDT to the gdtSeg
+	mov ecx, 0
+	mov ah, [gdtSeg.base_hi]
+	mov al, [gdtSeg.base_mid]
+	shl eax, 16
+	mov ax, word [gdtSeg.base_low]
+	jmp .copyLoop
+	
+	.copyLoop:
+	mov bl, [nullSeg + ecx]
+	mov [eax + ecx], bl
+	inc ecx
+	cmp ecx, gdtSize
+	jle .copyLoop
+	ret
+
 mMap_loadKernel:
-	;; Before anything, enter unreal mode to access >1MB of memory but still have BIOS
-	push dx
-	call .enterUnrealMode
 	;; We will load 4KB of the kernel at a time to kernelHold
 	;; After each 4KB framgment has been loaded, we copy it to kernelSeg
 	;; Firstly, find out how many fragments we will have
+	push dx
 	mov eax, kernelSize
 	mov edx, 0
 	mov ecx, 4096
@@ -94,7 +109,7 @@ mMap_loadKernel:
 	pop ecx
 	ret
 
-	.enterUnrealMode:	
+mMap_enterUnrealMode:	
 	;; Save segment
 	push ds
 	;; Load GDT and enter protected mode
@@ -142,7 +157,7 @@ getMemoryMap:
 	;; Get a map of high memory (>1 Meg) and set the GDT accordingly
 	;; EBP used as counter
 	
-	mov ax, 0x1000
+	mov ax, 0x8c0
 	mov es, ax
 	mov di, 0
 
@@ -202,7 +217,6 @@ getMemoryMap:
 
 	.success:
 	;; TODO: merge overlapping or adjacent free memory
-	;; NOTE: might need to save some registers, though ebp is fine
 	;; Hackily converts text to numbers, assuming there are under 10 entries
 	mov dx, .msg1
 	mov bl, 00000010b
@@ -218,7 +232,7 @@ getMemoryMap:
 
 prepGDT:
 	;; Set GDT values based on memory map
-	mov ax, 0x1000
+	mov ax, 0x8c0
 	mov es, ax
 	mov di, 0
 	mov bx, 0
@@ -242,6 +256,9 @@ prepGDT:
 	mov ax, word[stackSeg.limit_low]
 	cmp ax, 0
 	je textErr
+	mov ax, word[codeSeg.limit_low]
+	cmp ax, 0
+	je textErr
 
 	mov dx, .gdtPrepSuccess
 	mov bx, 00000010b
@@ -258,12 +275,8 @@ prepGDT:
 	je .ret
 	inc bx
 
-	;; Check mem's length fits in 32 bits?
-	;; No, because if it doesn't it wont be used anyways (we have enough for all segments)
-
-	jmp .accessableMem
-	;; Check mem's base address fits in 32 bits (NOTE: CURRENTLY DISABLED IDK IT DOESNT WORK LOL BRUH )
-	mov eax, dword [es:di]
+	;; Check mem's base address fits in 32 bits
+	mov eax, dword [es:di+4]
 	cmp eax, 0
 	je .accessableMem
 	jmp .checkNextMem
@@ -272,13 +285,17 @@ prepGDT:
 	;; Check memory is usable
 	mov eax, dword [es:di + 16]
 	cmp eax, 1
-	je .usableMem
-	jmp .checkNextMem
+	jne .checkNextMem
+	;; Check memory is high memory (prevent bootloader being overriden)
+	mov eax, dword [es:di]
+	cmp eax, 0xFFFFF
+	jle .checkNextMem
+	jmp .usableMem
 
 	.usableMem:
 	;; Fit as many segments as possible into this region
 	mov eax, dword [es:di + 8]	; Space left in segment
-	mov ecx, dword [es:di + 4]	; Low 32 bits of segment offset
+	mov ecx, dword [es:di]		; Segment offset
 	jmp .kernelCheck
 
 	.kernelCheck:
@@ -291,14 +308,15 @@ prepGDT:
 	jmp .gdtCheck
 	
 	.setKernel:
+	mov ebx, ecx
 	sub eax, kernelSize
 	add ecx, kernelSize
 	;; Load low 16 bits
-	mov word [kernelSeg.base_low], cx
+	mov word [kernelSeg.base_low], bx
 	;; Load mid 8 bits and hi 8 bits
-	shr ecx, 16
-	mov byte [kernelSeg.base_mid], cl
-	mov byte [kernelSeg.base_hi], ch
+	shr ebx, 16
+	mov byte [kernelSeg.base_mid], bl
+	mov byte [kernelSeg.base_hi], bh
 
 	;; Load limit
 	push eax
@@ -342,14 +360,15 @@ prepGDT:
 	jmp .heapCheck
 	
 	.setGdt: 
+	mov ebx, ecx
 	sub eax, gdtSize
 	add ecx, gdtSize
 	;; Load low 16 bits
-	mov word [gdtSeg.base_low], cx
+	mov word [gdtSeg.base_low], bx
 	;; Load mid 8 bits and hi 8 bits
-	shr ecx, 16
-	mov byte [gdtSeg.base_mid], cl
-	mov byte [gdtSeg.base_hi], ch
+	shr ebx, 16
+	mov byte [gdtSeg.base_mid], bl
+	mov byte [gdtSeg.base_hi], bh
 
 	;; Set limit without granularity (gdt is too small)
 	;;Load low 16 bits
@@ -383,14 +402,15 @@ prepGDT:
 	jmp .stackCheck
 
 	.setHeap:
+	mov ebx, ecx
 	sub eax, heapSize
 	add ecx, heapSize
 	;; Load low 16 bits
-	mov word [heapSeg.base_low], cx
+	mov word [heapSeg.base_low], bx
 	;; Load mid 8 bits hi 8 bits
-	shr ecx, 16
-	mov byte [heapSeg.base_mid], cl
-	mov byte [heapSeg.base_hi], ch
+	shr ebx, 16
+	mov byte [heapSeg.base_mid], bl
+	mov byte [heapSeg.base_hi], bh
 
 	;; Load limit
 	push eax
@@ -429,21 +449,22 @@ prepGDT:
 	.stackCheck:
 	;;Check we haven't already set te stackSeg
 	cmp word [stackSeg.limit_low], 0
-	jne .checkNextMem
+	jne .codeCheck
 	;;Check this mem is big enough for stackSeg
 	cmp eax, stackSize
 	jge .setStack
-	jmp .checkNextMem
+	jmp .codeCheck
 
 	.setStack:
+	mov ebx, ecx
 	sub eax, stackSize
 	add ecx, stackSize
 	;; Load low 16 bits
-	mov word [stackSeg.base_low], cx
+	mov word [stackSeg.base_low], bx
 	;; Load mid 8 bits and hi 8 bits
-	shr ecx, 16
-	mov byte [stackSeg.base_mid], cl
-	mov byte [stackSeg.base_hi], ch
+	shr ebx, 16
+	mov byte [stackSeg.base_mid], bl
+	mov byte [stackSeg.base_hi], bh
 
 	;; Load limit
 	push eax
@@ -477,6 +498,58 @@ prepGDT:
 	pop edx
 	pop eax
 
+	jmp .codeCheck
+
+.codeCheck:
+	;; Check we havn't already set codeSeg
+	cmp word [codeSeg.limit_low], 0
+	jne .checkNextMem
+	;; Check this mem is big enough for codeSeg
+	cmp eax, codeSize
+	jge .setCode
+	jmp .checkNextMem
+	
+	.setCode:
+	mov ebx, ecx
+	sub eax, codeSize
+	add ecx, codeSize
+	;; Load low 16 bits
+	mov word [codeSeg.base_low], bx
+	;; Load mid 8 bits and hi 8 bits
+	shr ebx, 16
+	mov byte [codeSeg.base_mid], bl
+	mov byte [codeSeg.base_hi], bh
+
+	;; Load limit
+	push eax
+	push edx
+	push ecx
+	
+	;;Calculate 4kb pages
+	mov ecx, 4096
+	mov edx, 0
+	mov eax, codeSize
+	div ecx
+	cmp edx, 0
+	mov dx, .granularityNotDivisible
+	jne textErr
+
+	;;Load low 16 bits
+	mov [codeSeg.limit_low], ax
+	;;Pull bits 16-20 into top of al
+	mov ax, 0
+	shr eax, 12
+	mov dl, [codeSeg.flags]
+	;; Put top 4 bits of flags into low of dh
+	shl dx, 4
+	;; Load low 4 bit
+	mov dl, al 
+	;; Shift flags back to give us flags + low 4 bits of limit
+	shr dx, 4
+	mov [codeSeg.flags], dl
+	pop ecx
+	pop edx
+	pop eax
 	jmp .checkNextMem
 
 	.checkNextMem:

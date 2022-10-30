@@ -40,14 +40,22 @@ gdtSeg:
 	.flags:		db noGranFlags
 	.base_hi:	db 0
 
-;; Program code segs will be created by the scheduler (that is why GDT seg is r/w)
-codeSegs: times 10 dq 0
+;; Starts off as data, but scheduler should set it to code before execution
+codeSeg:
+	.limit_low:	dw 0
+	.base_low:	dw 0
+	.base_mid:	db 0
+	.access:	db dataAccess
+	.flags:		db granFlags
+	.base_hi:	db 0
 
 gdtr:
-	dw codeSegs - nullSeg - 1
+	dw gdtr - nullSeg - 1
 	dd nullSeg
 
-%define gdtSize ((gdtr + 8) - nullSeg)
+gdtrEnd:
+
+%define gdtSize (gdtrEnd - nullSeg)
 pModeMsg: db "Entering VBE, loading GDT and jumping to 32 bit protected mode kernel...", 0
 
 
