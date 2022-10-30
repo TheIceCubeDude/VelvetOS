@@ -24,14 +24,13 @@ main:
 	call mMap_enterUnrealMode
 	pop dx
 	call mMap_loadKernel
-	call mMap_relocateGDT
+	call mMap_relocateMmap
 
 	;; Once we enter VBE, BIOS printing will not work
 	;; pModeMsg is located in GDT structure file
 	mov dx, pModeMsg
 	mov bl, 00001111b
 	call textPrint
-	
 	call VBE_enterGraphicsMode
 	jmp enterPMode
 
@@ -96,17 +95,16 @@ enterVGAMode:
 	.msg3: db "Could not enter VGA mode 12h. Will proceed with boot anyways.", 0
 
 enterPMode:
-	mov ah, [gdtSeg.base_low]
-	mov al, [gdtSeg.base_mid]
-	shl eax, 16
-	mov ax, [gdtSeg.base_low]
-	lgdt [gdtr-nullSeg + eax]
-	
+	;; ECX contains location of mmap
+	mov ecx, [mmap.mmap]
+	;; Load GDT and toggle protected mode bit
+	lgdt[gdtr]
 	mov eax, cr0
 	or al, 1
 	mov cr0, eax
-	;; Jump to beginning (offset 1) of kernel segment
-	jmp 8:0
+	;; Jump to kernel
+	mov eax, dword [mmap.kernel]
+	jmp 8:jumpToKernel
 
 textErr:
 	;; DX  - String ptr
@@ -181,6 +179,9 @@ bootUtils:
 	%include "bootloader/VBE.asm"
 	%include "bootloader/memory_map.asm"
 	%include "bootloader/A20.asm"
+
+[BITS 32]
+jumpToKernel: jmp eax
 
 	times 4608-($-$$) db 0
 kernelHold:

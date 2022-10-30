@@ -1,4 +1,4 @@
-%include "structures/gdt.asm"
+%include "structures/mmap.asm"
 %include "structures/size_info.asm"	
 
 mMap_prepareMemory:
@@ -6,20 +6,17 @@ mMap_prepareMemory:
 	call prepGDT
 	ret
 
-mMap_relocateGDT:
+mMap_relocateMmap:
 	;; This will copy the GDT to the gdtSeg
 	mov ecx, 0
-	mov ah, [gdtSeg.base_hi]
-	mov al, [gdtSeg.base_mid]
-	shl eax, 16
-	mov ax, word [gdtSeg.base_low]
+	mov eax, [mmap.mmap]
 	jmp .copyLoop
 	
 	.copyLoop:
-	mov bl, [nullSeg + ecx]
+	mov bl, [mmap + ecx]
 	mov [eax + ecx], bl
 	inc ecx
-	cmp ecx, gdtSize
+	cmp ecx, mmapSize
 	jle .copyLoop
 	ret
 
@@ -50,12 +47,9 @@ mMap_loadKernel:
 	;; Load fragment off disk to kernelHold
 	push dx
 	call .loadFragment
-	;; Now copy the fragment in kernelHold to final destination in kernelSeg
+	;; Now copy the fragment in kernelHold to final destination
 	;; Firstly, get the base location
-        mov ah, [kernelSeg.base_hi]
-        mov al, [kernelSeg.base_mid]
-        shl eax, 16
-        mov ax, [kernelSeg.base_low]
+        mov eax, [mmap.kernel]
 	;; Now calculate Counter * 4KB to give us offset
 	push eax
 	mov ebx, 4096
@@ -244,20 +238,20 @@ prepGDT:
 	;;Check there is enough RAM
 	;; (All segment should have been allocated)
 	mov dx, .minRamErr
-	mov ax, word[kernelSeg.limit_low]
-	cmp ax, 0
+	mov eax, dword [mmap.kernel]
+	cmp eax, 0
 	je textErr
-	mov ax, word[gdtSeg.limit_low]
-	cmp ax, 0
+	mov eax, dword [mmap.mmap]
+	cmp eax, 0
 	je textErr
-	mov ax, word[heapSeg.limit_low]
-	cmp ax, 0
+	mov eax, dword [mmap.heap]
+	cmp eax, 0
 	je textErr
-	mov ax, word[stackSeg.limit_low]
-	cmp ax, 0
+	mov eax, dword [mmap.stack]
+	cmp eax, 0
 	je textErr
-	mov ax, word[codeSeg.limit_low]
-	cmp ax, 0
+	mov eax, dword [mmap.code]
+	cmp eax, 0
 	je textErr
 
 	mov dx, .gdtPrepSuccess
@@ -267,7 +261,7 @@ prepGDT:
 	ret
 
 	.minRamErr: db "Not enough RAM!", 0
-	.gdtPrepSuccess: db "GDT successfully prepared with memory map!", 0
+	.gdtPrepSuccess: db "Memory map succesfully prepared!", 0
 
 	.findMem:
 	;; Check if we are at the end of the list
@@ -300,101 +294,37 @@ prepGDT:
 
 	.kernelCheck:
 	;; Check we havn't already set kernelSeg
-	cmp word [kernelSeg.limit_low], 0
-	jne .gdtCheck
+	cmp word [mmap.kernel], 0
+	jne .mmapCheck
 	;; Check this mem is big enough for kernelSeg
 	cmp eax, kernelSize
 	jge .setKernel
-	jmp .gdtCheck
+	jmp .mmapCheck
 	
 	.setKernel:
-	mov ebx, ecx
+	mov [mmap.kernel], ecx
 	sub eax, kernelSize
 	add ecx, kernelSize
-	;; Load low 16 bits
-	mov word [kernelSeg.base_low], bx
-	;; Load mid 8 bits and hi 8 bits
-	shr ebx, 16
-	mov byte [kernelSeg.base_mid], bl
-	mov byte [kernelSeg.base_hi], bh
+	jmp .mmapCheck
 
-	;; Load limit
-	push eax
-	push edx
-	push ecx
-	
-	;;Calculate 4kb pages
-	mov ecx, 4096
-	mov edx, 0
-	mov eax, kernelSize
-	div ecx
-	cmp edx, 0
-	mov dx, .granularityNotDivisible
-	jne textErr
-
-	;;Load low 16 bits
-	mov [kernelSeg.limit_low], ax
-	;;Pull bits 16-20 into top of al
-	mov ax, 0
-	shr eax, 12
-	mov dl, [kernelSeg.flags]
-	;; Put top 4 bits of flags into low of dh
-	shl dx, 4
-	;; Load low 4 bit
-	mov dl, al 
-	;; Shift flags back to give us flags + low 4 bits of limit
-	shr dx, 4
-	mov [kernelSeg.flags], dl
-	pop ecx
-	pop edx
-	pop eax
-	jmp .gdtCheck
-
-	.gdtCheck:
-	;;Check we haven't already set gdtSeg
-	cmp word [gdtSeg.limit_low], 0
+	.mmapCheck:
+	;;Check we haven't already set mmapSeg
+	cmp word [mmap.mmap], 0
 	jne .heapCheck
-	;;Check this mem is big enough for gdtSeg
-	cmp eax, gdtSize
-	jge .setGdt
+	;;Check this mem is big enough for mmapSeg
+	cmp eax, mmapSize
+	jge .setMmap
 	jmp .heapCheck
 	
-	.setGdt: 
-	mov ebx, ecx
-	sub eax, gdtSize
-	add ecx, gdtSize
-	;; Load low 16 bits
-	mov word [gdtSeg.base_low], bx
-	;; Load mid 8 bits and hi 8 bits
-	shr ebx, 16
-	mov byte [gdtSeg.base_mid], bl
-	mov byte [gdtSeg.base_hi], bh
-
-	;; Set limit without granularity (gdt is too small)
-	;;Load low 16 bits
-	push eax
-	push edx
-	mov eax, gdtSize
-	mov [gdtSeg.limit_low], ax
-	;;Pull bits 16-20 into top of al
-	mov ax, 0
-	shr eax, 12
-	mov dl, [gdtSeg.flags]
-	;; Put top 4 bits of flags into low of dh
-	shl dx, 4
-	;; Load low 4 bit
-	mov dl, al 
-	;; Shift flags back to give us flags + low 4 bits of limit
-	shr dx, 4
-	mov [gdtSeg.flags], dl
-	pop edx
-	pop eax
-
+	.setMmap: 
+	mov [mmap.mmap], ecx
+	sub eax, mmapSize
+	add ecx, mmapSize
 	jmp .heapCheck
 
 	.heapCheck:
 	;;Check we haven't already set heapSeg
-	cmp word [heapSeg.limit_low], 0
+	cmp dword [mmap.heap], 0
 	jne .stackCheck
 	;;Check this mem is big enough for heapSeg
 	cmp eax, heapSize
@@ -402,53 +332,14 @@ prepGDT:
 	jmp .stackCheck
 
 	.setHeap:
-	mov ebx, ecx
+	mov [mmap.heap], ecx
 	sub eax, heapSize
 	add ecx, heapSize
-	;; Load low 16 bits
-	mov word [heapSeg.base_low], bx
-	;; Load mid 8 bits hi 8 bits
-	shr ebx, 16
-	mov byte [heapSeg.base_mid], bl
-	mov byte [heapSeg.base_hi], bh
-
-	;; Load limit
-	push eax
-	push edx
-	push ecx
-	
-	;;Calculate 4kb pages
-	mov ecx, 4096
-	mov edx, 0
-	mov eax, heapSize
-	div ecx
-	cmp edx, 0
-	mov dx, .granularityNotDivisible
-	jne textErr
-
-	;;Load low 16 bits
-	mov [heapSeg.limit_low], ax
-	;;Pull bits 16-20 into top of al
-	mov ax, 0
-	shr eax, 12
-	mov dl, [heapSeg.flags]
-	;; Put top 4 bits of flags into low of dh
-	shl dx, 4
-	;; Load low 4 bit
-	mov dl, al 
-	;; Shift flags back to give us flags + low 4 bits of limit
-	shr dx, 4
-	mov [heapSeg.flags], dl
-
-	pop ecx
-	pop edx
-	pop eax
-
 	jmp .stackCheck
 
 	.stackCheck:
 	;;Check we haven't already set te stackSeg
-	cmp word [stackSeg.limit_low], 0
+	cmp dword [mmap.stack], 0
 	jne .codeCheck
 	;;Check this mem is big enough for stackSeg
 	cmp eax, stackSize
@@ -456,53 +347,14 @@ prepGDT:
 	jmp .codeCheck
 
 	.setStack:
-	mov ebx, ecx
+	mov dword [mmap.stack], ecx
 	sub eax, stackSize
 	add ecx, stackSize
-	;; Load low 16 bits
-	mov word [stackSeg.base_low], bx
-	;; Load mid 8 bits and hi 8 bits
-	shr ebx, 16
-	mov byte [stackSeg.base_mid], bl
-	mov byte [stackSeg.base_hi], bh
-
-	;; Load limit
-	push eax
-	push edx
-	push ecx
-	
-	;;Calculate 4kb pages
-	mov ecx, 4096
-	mov edx, 0
-	mov eax, stackSize
-	div ecx
-	cmp edx, 0
-	mov dx, .granularityNotDivisible
-	jne textErr
-
-	;;Load low 16 bits
-	mov [stackSeg.limit_low], ax
-	;;Pull bits 16-20 into top of al
-	mov ax, 0
-	shr eax, 12
-	mov dl, [stackSeg.flags]
-	;; Put top 4 bits of flags into low of dh
-	shl dx, 4
-	;; Load low 4 bit
-	mov dl, al 
-	;; Shift flags back to give us flags + low 4 bits of limit
-	shr dx, 4
-	mov [stackSeg.flags], dl
-
-	pop ecx
-	pop edx
-	pop eax
-
 	jmp .codeCheck
 
-.codeCheck:
+	.codeCheck:
 	;; Check we havn't already set codeSeg
-	cmp word [codeSeg.limit_low], 0
+	cmp dword [mmap.code], 0
 	jne .checkNextMem
 	;; Check this mem is big enough for codeSeg
 	cmp eax, codeSize
@@ -510,53 +362,14 @@ prepGDT:
 	jmp .checkNextMem
 	
 	.setCode:
-	mov ebx, ecx
+	mov dword [mmap.code], ecx
 	sub eax, codeSize
 	add ecx, codeSize
-	;; Load low 16 bits
-	mov word [codeSeg.base_low], bx
-	;; Load mid 8 bits and hi 8 bits
-	shr ebx, 16
-	mov byte [codeSeg.base_mid], bl
-	mov byte [codeSeg.base_hi], bh
-
-	;; Load limit
-	push eax
-	push edx
-	push ecx
-	
-	;;Calculate 4kb pages
-	mov ecx, 4096
-	mov edx, 0
-	mov eax, codeSize
-	div ecx
-	cmp edx, 0
-	mov dx, .granularityNotDivisible
-	jne textErr
-
-	;;Load low 16 bits
-	mov [codeSeg.limit_low], ax
-	;;Pull bits 16-20 into top of al
-	mov ax, 0
-	shr eax, 12
-	mov dl, [codeSeg.flags]
-	;; Put top 4 bits of flags into low of dh
-	shl dx, 4
-	;; Load low 4 bit
-	mov dl, al 
-	;; Shift flags back to give us flags + low 4 bits of limit
-	shr dx, 4
-	mov [codeSeg.flags], dl
-	pop ecx
-	pop edx
-	pop eax
 	jmp .checkNextMem
 
 	.checkNextMem:
 	add di, 24
 	jmp .findMem
-
-	.granularityNotDivisible: db "GDT granularity pages are not even with target sizes of segments!", 0
 	
 	.ret: ret
 
