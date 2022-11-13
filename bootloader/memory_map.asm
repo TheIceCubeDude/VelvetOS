@@ -3,7 +3,7 @@
 
 mMap_prepareMemory:
 	call getMemoryMap
-	call prepGDT
+	call prepMmap
 	ret
 
 mMap_relocateMmap:
@@ -224,8 +224,8 @@ getMemoryMap:
 	.msg1: db "Successfully got memory map, with a entry count of: "
 	.msg1Status: db "??", 0
 
-prepGDT:
-	;; Set GDT values based on memory map
+prepMmap:
+	;; Set mmap values based on memory map
 	mov ax, 0x8c0
 	mov es, ax
 	mov di, 0
@@ -254,14 +254,14 @@ prepGDT:
 	cmp eax, 0
 	je textErr
 
-	mov dx, .gdtPrepSuccess
+	mov dx, .mmapPrepSuccess
 	mov bx, 00000010b
 	call textPrint
 
 	ret
 
 	.minRamErr: db "Not enough RAM!", 0
-	.gdtPrepSuccess: db "Memory map succesfully prepared!", 0
+	.mmapPrepSuccess: db "Memory map succesfully prepared!", 0
 
 	.findMem:
 	;; Check if we are at the end of the list

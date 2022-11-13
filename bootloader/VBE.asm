@@ -1,3 +1,4 @@
+%define desiredBpp 32
 VBE_enterGraphicsMode:
 	call getAvaliableModes
 	call findBestMode
@@ -113,10 +114,10 @@ findBestMode:
 	bt dx, 7
 	jnc .ret
 	
-	;; Check bpp == 32
+	;; Check bpp is the desired one
 	mov dx, 0
 	mov dl, byte[VBEModeInfoStruct.bpp]
-	cmp dl, 32
+	cmp dl, desiredBpp
 	jne .ret
 	
 	;; Calculate resolution -> width * height [maybe in the future factor in bpp? But for now that results in an enourmous number so we won't do that]
@@ -222,7 +223,9 @@ selectMode:
 setFramebufferMmap:
 	;; Set base
 	mov ecx, dword [VBEModeInfoStruct.framebuffer]
-	mov [mmap.framebuffer], ecx
+	mov eax, [mmap.mmap]
+	push eax
+	mov [mmap.framebuffer - mmap + eax], ecx
 	;; Calculate size of framebuffer and set limit
 	mov edx, 0
 	mov eax, 0
@@ -233,7 +236,8 @@ setFramebufferMmap:
 	;; Result is in DX:AX not EAX, so merge them into EDX
 	shl edx, 16
 	mov dx, ax
-	mov [mmap.framebufferSize], edx
+	pop eax
+	mov [mmap.framebufferSize - mmap + eax], edx
 	ret
 
 VBEInfoStruct:
