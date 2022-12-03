@@ -1,27 +1,27 @@
+#include "video/graphics.c"
+
 struct memoryMap {
-	unsigned long kernel;
-	unsigned long code;
 	unsigned long mmap;
+	unsigned long kernel;
+	unsigned long kernelSize;
+	unsigned long code;
+	unsigned long codeSize;
 	unsigned long stack;
+	unsigned long stackSize;
 	unsigned long heap;
+	unsigned long heapSize;
+} __attribute__ ((packed));
+struct framebufferInfo {
 	unsigned long* framebuffer;
 	unsigned long framebufferSize;
+	unsigned short framebufferWidth;
+	unsigned short framebufferHeight;
+	unsigned short framebufferBPL;
 } __attribute__ ((packed));
 
-void wipeScreen(unsigned long *framebuf, unsigned long framebufSize, unsigned long colour) {
-	for (unsigned long *ptr = framebuf; ptr<framebufSize / 4 + framebuf; ptr++) {
-		//Pointer arithmetic means i++ is actually i=i+4 in a ulong
-		*ptr = colour;
-	}
-	return;
-}
-
-int var = 5;
-extern void kmain(struct memoryMap *mmap) {
-	for (int i=0; i<var; i++) {
-		wipeScreen(mmap->framebuffer, mmap->framebufferSize, 0x00FF0000);
-		wipeScreen(mmap->framebuffer, mmap->framebufferSize, 0x000000FF);
-
-	}
+unsigned short divFac = 2;
+extern void kmain(struct memoryMap *mmap, struct framebufferInfo *fbInfo) {
+	videoInit(fbInfo->framebufferWidth, fbInfo->framebufferHeight, fbInfo->framebufferBPL, fbInfo->framebuffer);
+	putPixel(fbInfo->framebufferWidth/divFac, fbInfo->framebufferHeight/divFac,0x00FFFFFF);
 	return;
 }

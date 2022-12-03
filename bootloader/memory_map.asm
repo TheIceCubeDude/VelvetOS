@@ -1,31 +1,28 @@
-%include "structures/mmap.asm"
-%include "structures/size_info.asm"	
-
 mMap_prepareMemory:
 	call getMemoryMap
 	call prepMmap
 	ret
 
-mMap_relocateMmap:
-	;; This will copy the GDT to the gdtSeg
+mMap_relocateCoreinfo:
+	;; This will copy the coreinfo to the coreinfo seg
 	mov ecx, 0
-	mov eax, [mmap.mmap]
+	mov eax, [mmap.coreinfo]
 	jmp .copyLoop
 	
 	.copyLoop:
-	mov bl, [mmap + ecx]
+	mov bl, [coreinfo + ecx]
 	mov [eax + ecx], bl
 	inc ecx
-	cmp ecx, mmapSize
+	cmp ecx, coreinfoSize
 	jle .copyLoop
 	ret
 
 mMap_loadKernel:
-	;; We will load 4KB of the kernel at a time to kernelHold
+	;; We will load 4KB of the kernel at a time to tmp
 	;; After each 4KB framgment has been loaded, we copy it to kernelSeg
 	;; Firstly, find out how many fragments we will have
 	push dx
-	mov eax, kernelSize
+	mov eax, [mmap.kernelSize]
 	mov edx, 0
 	mov ecx, 4096
 	div ecx
@@ -73,7 +70,7 @@ mMap_loadKernel:
 
 	.copyFragment:
 	;; Will automatically use DS, which is in unreal mode and thus can access > 1MB
-	mov bl, [kernelHold + ecx]
+	mov bl, [tmp + ecx]
 	mov [eax + ecx], bl
 	inc ecx
 	cmp ecx, 4096
@@ -143,7 +140,7 @@ dap:
 	.size: 		db 0x10
 	.unused:	db 0
 	.sectorCount:	dw 8
-	.offset:	dw kernelHold
+	.offset:	dw tmp
 	.segment:	dw 0
 	.lba:		dq 0
 
@@ -151,15 +148,19 @@ getMemoryMap:
 	;; Get a map of high memory (>1 Meg) and set the GDT accordingly
 	;; EBP used as counter
 	
-	mov ax, 0x8c0
+	mov ax, tmp
+	mov dx, 0
+	mov bx, 16
+	div bx
 	mov es, ax
+	mov [.tmpSeg], ax
 	mov di, 0
 
 	mov ebx, 0
 	mov ebp, 0
 
 	;; Perform first call
-	mov eax, 0x0000E820
+	mov eax, 0xE820
 	mov ecx, 24
 	mov edx, 0x0534D4150
 	int 0x15
@@ -176,6 +177,8 @@ getMemoryMap:
 	
 	ret
 
+	.tmpSeg: dw 0
+
 	.getEntries:
 	;; Finish off the last entry:
 	
@@ -189,7 +192,7 @@ getMemoryMap:
 	;; Get the next entry:
 	
 	;; This stuff gets trashed after call
-	mov eax, 0x0000E820
+	mov eax, 0xE820
 	mov ecx, 24
 	;; Signature, "SMAP"
 	mov edx, 0x0534D4150
@@ -226,7 +229,7 @@ getMemoryMap:
 
 prepMmap:
 	;; Set mmap values based on memory map
-	mov ax, 0x8c0
+	mov ax, [getMemoryMap.tmpSeg]
 	mov es, ax
 	mov di, 0
 	mov bx, 0
@@ -241,7 +244,7 @@ prepMmap:
 	mov eax, dword [mmap.kernel]
 	cmp eax, 0
 	je textErr
-	mov eax, dword [mmap.mmap]
+	mov eax, dword [mmap.coreinfo]
 	cmp eax, 0
 	je textErr
 	mov eax, dword [mmap.heap]
@@ -282,8 +285,8 @@ prepMmap:
 	jne .checkNextMem
 	;; Check memory is high memory (prevent bootloader being overriden)
 	mov eax, dword [es:di]
-	cmp eax, 0xFFFFF
-	jle .checkNextMem
+	cmp eax, 1048576
+	jl .checkNextMem
 	jmp .usableMem
 
 	.usableMem:
@@ -295,31 +298,31 @@ prepMmap:
 	.kernelCheck:
 	;; Check we havn't already set kernelSeg
 	cmp word [mmap.kernel], 0
-	jne .mmapCheck
+	jne .coreinfoCheck
 	;; Check this mem is big enough for kernelSeg
-	cmp eax, kernelSize
+	cmp eax,[mmap.kernelSize]
 	jge .setKernel
-	jmp .mmapCheck
+	jmp .coreinfoCheck
 	
 	.setKernel:
 	mov [mmap.kernel], ecx
-	sub eax, kernelSize
-	add ecx, kernelSize
-	jmp .mmapCheck
+	sub eax, [mmap.kernelSize]
+	add ecx, [mmap.kernelSize]
+	jmp .coreinfoCheck
 
-	.mmapCheck:
-	;;Check we haven't already set mmapSeg
-	cmp word [mmap.mmap], 0
+	.coreinfoCheck:
+	;;Check we haven't already set coreinfoSeg
+	cmp word [mmap.coreinfo], 0
 	jne .heapCheck
-	;;Check this mem is big enough for mmapSeg
-	cmp eax, mmapSize
-	jge .setMmap
+	;;Check this mem is big enough for coreinfoSeg
+	cmp eax, coreinfo
+	jge .setCoreinfo
 	jmp .heapCheck
 	
-	.setMmap: 
-	mov [mmap.mmap], ecx
-	sub eax, mmapSize
-	add ecx, mmapSize
+	.setCoreinfo: 
+	mov [mmap.coreinfo], ecx
+	sub eax, coreinfoSize
+	add ecx, coreinfoSize
 	jmp .heapCheck
 
 	.heapCheck:
@@ -327,14 +330,14 @@ prepMmap:
 	cmp dword [mmap.heap], 0
 	jne .stackCheck
 	;;Check this mem is big enough for heapSeg
-	cmp eax, heapSize
+	cmp eax, [mmap.heapSize]
 	jge .setHeap
 	jmp .stackCheck
 
 	.setHeap:
 	mov [mmap.heap], ecx
-	sub eax, heapSize
-	add ecx, heapSize
+	sub eax, [mmap.heapSize]
+	add ecx, [mmap.heapSize]
 	jmp .stackCheck
 
 	.stackCheck:
@@ -342,14 +345,14 @@ prepMmap:
 	cmp dword [mmap.stack], 0
 	jne .codeCheck
 	;;Check this mem is big enough for stackSeg
-	cmp eax, stackSize
+	cmp eax, [mmap.stackSize]
 	jge .setStack
 	jmp .codeCheck
 
 	.setStack:
 	mov dword [mmap.stack], ecx
-	sub eax, stackSize
-	add ecx, stackSize
+	sub eax, [mmap.stackSize]
+	add ecx, [mmap.stackSize]
 	jmp .codeCheck
 
 	.codeCheck:
@@ -357,14 +360,14 @@ prepMmap:
 	cmp dword [mmap.code], 0
 	jne .checkNextMem
 	;; Check this mem is big enough for codeSeg
-	cmp eax, codeSize
+	cmp eax, [mmap.codeSize]
 	jge .setCode
 	jmp .checkNextMem
 	
 	.setCode:
 	mov dword [mmap.code], ecx
-	sub eax, codeSize
-	add ecx, codeSize
+	sub eax, [mmap.codeSize]
+	add ecx, [mmap.codeSize]
 	jmp .checkNextMem
 
 	.checkNextMem:

@@ -223,9 +223,17 @@ selectMode:
 setFramebufferMmap:
 	;; Set base
 	mov ecx, dword [VBEModeInfoStruct.framebuffer]
-	mov eax, [mmap.mmap]
+	mov eax, [mmap.coreinfo]
+
+	mov dx, word [VBEModeInfoStruct.width]
+	mov [fbInfo.framebufferWidth - coreinfo + eax], dx
+	mov dx, word [VBEModeInfoStruct.height]
+	mov [fbInfo.framebufferHeight - coreinfo + eax], dx
+	mov dx, word [VBEModeInfoStruct.pitch]
+	mov [fbInfo.framebufferBPL - coreinfo + eax], dx
+
 	push eax
-	mov [mmap.framebuffer - mmap + eax], ecx
+	mov [fbInfo.framebuffer - mmap + eax], ecx
 	;; Calculate size of framebuffer and set limit
 	mov edx, 0
 	mov eax, 0
@@ -237,7 +245,7 @@ setFramebufferMmap:
 	shl edx, 16
 	mov dx, ax
 	pop eax
-	mov [mmap.framebufferSize - mmap + eax], edx
+	mov [fbInfo.framebufferSize - coreinfo + eax], edx
 	ret
 
 VBEInfoStruct:

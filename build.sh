@@ -3,6 +3,7 @@ nasm bootloader/main.asm -f bin -o build/bootloader.bin
 
 echo Assembling kernel
 nasm kernel/main.asm -f elf -o build/kernelMain.o
+
 echo Compiling kernel
 i686-elf-gcc -c -ffreestanding -fPIE -o build/kernel.o kernel/kernel.c
 
