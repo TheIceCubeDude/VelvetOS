@@ -6,8 +6,8 @@ SECTIONS
 	/*. = 0x100000;*/
 	. = 0x0;
 	.text : { *(.text) }
-	.rodata : { *(.rodata) }
-	.data : { *(.data) }
-	.bss  : { *(.bss)  }
+	.rodata : ALIGN(4){*(.rodata) }
+	.data : ALIGN(4) {*(.data) }
+	.bss  : ALIGN(4) {*(.bss)  }
 	.got : { _GLOBAL_OFFSET_TABLE_ = .; *(.got) }
 }

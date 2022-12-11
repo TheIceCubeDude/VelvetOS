@@ -55,14 +55,10 @@ loadBootloader:
 	ret
 
 	.err:
-	;; Converts numbers to ASCII very hackily
-	add ah, 0x30
-	mov [.msg0Status], ah
 	mov dx, .msg0
 	call textErr
 
-	.msg0: db "Couldn't load bootloader, int 13h returned: "
-	.msg0Status: db "?", 0
+	.msg0: db "Couldn't load bootloader!", 0
 	.msg1: db "Bootloader succesfully loaded!", 0
 
 enterVGAMode:
@@ -97,9 +93,9 @@ enterVGAMode:
 enterPMode:
 	;; ECX contains location of mmap
 	mov ecx, [mmap.coreinfo]
-	;; EDX contains location of fbInfo
-	mov edx, ecx
-	add edx, fbInfo - coreinfo
+	;; EBX contains location of fbInfo
+	mov ebx, ecx
+	add ebx, fbInfo - coreinfo
 	;; Load GDT and toggle protected mode bit
 	lgdt[gdtr]
 	mov eax, cr0
@@ -188,5 +184,6 @@ bootUtils:
 [BITS 32]
 jumpToKernel: jmp eax
 
-	times 4608-($-$$) db 0
+times 4608-($-$$) db 0
+align 4
 tmp:

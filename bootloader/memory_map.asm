@@ -41,10 +41,10 @@ mMap_loadKernel:
 	.kernelLoaded: db "Kernel succesfully loaded from boot media!", 0
 
 	.loadFragmentsLoop:
-	;; Load fragment off disk to kernelHold
+	;; Load fragment off disk to tmp
 	push dx
 	call .loadFragment
-	;; Now copy the fragment in kernelHold to final destination
+	;; Now copy the fragment in tmp to final destination
 	;; Firstly, get the base location
         mov eax, [mmap.kernel]
 	;; Now calculate Counter * 4KB to give us offset
@@ -217,15 +217,11 @@ getMemoryMap:
 	;; Hackily converts text to numbers, assuming there are under 10 entries
 	mov dx, .msg1
 	mov bl, 00000010b
-	mov ax, bp
-	add ax, 0x30
-	mov [.msg1Status], word ax
 	call textPrint
 	ret
 
 	.msg0: db "Failed to get memory map!", 0
-	.msg1: db "Successfully got memory map, with a entry count of: "
-	.msg1Status: db "??", 0
+	.msg1: db "Successfully got memory map!", 0
 
 prepMmap:
 	;; Set mmap values based on memory map
@@ -294,6 +290,21 @@ prepMmap:
 	mov eax, dword [es:di + 8]	; Space left in segment
 	mov ecx, dword [es:di]		; Segment offset
 	jmp .kernelCheck
+	
+	.alignMem:
+	;; Aligns eax
+	push edx
+	push ebx
+	push eax
+	mov edx, 0
+	mov ebx, 4
+	div ebx
+	pop eax
+	add eax, edx
+	pop ebx
+	pop edx
+	ret
+
 
 	.kernelCheck:
 	;; Check we havn't already set kernelSeg
@@ -308,6 +319,12 @@ prepMmap:
 	mov [mmap.kernel], ecx
 	sub eax, [mmap.kernelSize]
 	add ecx, [mmap.kernelSize]
+	;; Align kernel
+	push eax
+	mov eax, [mmap.kernel]
+	call .alignMem
+	mov [mmap.kernel], eax
+	pop eax
 	jmp .coreinfoCheck
 
 	.coreinfoCheck:
@@ -338,6 +355,12 @@ prepMmap:
 	mov [mmap.heap], ecx
 	sub eax, [mmap.heapSize]
 	add ecx, [mmap.heapSize]
+	;; Align heap
+	push eax
+	mov eax, [mmap.heap]
+	call .alignMem
+	mov [mmap.heap], eax
+	pop eax
 	jmp .stackCheck
 
 	.stackCheck:
@@ -368,6 +391,12 @@ prepMmap:
 	mov dword [mmap.code], ecx
 	sub eax, [mmap.codeSize]
 	add ecx, [mmap.codeSize]
+	;; Align code
+	push eax
+	mov eax, [mmap.code]
+	call .alignMem
+	mov [mmap.code], eax
+	pop eax
 	jmp .checkNextMem
 
 	.checkNextMem:

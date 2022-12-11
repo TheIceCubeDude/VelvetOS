@@ -34,14 +34,10 @@ getAvaliableModes:
 
 	.err:
 	mov dx, .msg1
-	;; Converts numbers to ASCII very hackily
-	add ah, 0x30
-	mov [.msg1Status], ah
 	jmp textErr
 
 	.msg0: db "VESA VBE is not supported on this system!", 0
-	.msg1: db "VESA VBE video mode query returned error code "
-	.msg1Status: db "?", "!", 0
+	.msg1: db "VESA VBE video mode query returned error!", 0
 	.msg2: db "Got VBE supported modes!", 0
 	
 findBestMode:
@@ -168,9 +164,6 @@ findBestMode:
 	.modeInfoErr:
 	;; Converts number to text very hackily
 	push edx
-	mov edx, 2
-	add ah, 0x30
-	mov [.msg2Status], ah
 	mov dx, .msg2
 	mov bl, 00001110b
 	call textPrint
@@ -186,8 +179,7 @@ findBestMode:
 
 	.msg0: db "VBE info block does not contain VESA signature! Your device probably only supports VBE 1.0", 0
 	.msg1: db "No VBE video modes found!", 0
-	.msg2: db "Could not get info for a video mode, returned error code "
-	.msg2Status: db "?. Skipping...", 0
+	.msg2: db "Could not get info for a video mode, skipping...", 0
 	.msg3: db "Succesfully chosen VBE mode!", 0
 	.msg4: db "Could not load the chosen mode's info!", 0
 
@@ -207,18 +199,13 @@ selectMode:
 
 	.err:
 	;; Drop into text mode
-	push ax
 	mov ax, 0
 	int 0x10
-	pop ax
 	
-	add ah, 0x30
-	mov byte [.msg0Status], ah
 	mov dx, .msg0
 	call textErr
 
-	.msg0: db "Could not load VBE mode, returned error code "
-	.msg0Status: db "X!", 0
+	.msg0: db "Could not load VBE mode, returned error!", 0
 
 setFramebufferMmap:
 	;; Set base
