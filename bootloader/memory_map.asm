@@ -299,8 +299,19 @@ prepMmap:
 	mov edx, 0
 	mov ebx, 4
 	div ebx
+	cmp edx, 0
+	je .alignMemOptimal
+	mov eax, 4
+	sub eax, edx
+	mov edx, eax
 	pop eax
 	add eax, edx
+	pop ebx
+	pop edx
+	ret
+
+	.alignMemOptimal:
+	pop eax
 	pop ebx
 	pop edx
 	ret
