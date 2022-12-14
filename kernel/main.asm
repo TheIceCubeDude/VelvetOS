@@ -30,6 +30,7 @@ _start:
 	push ebx
 	push ecx
 	call kmain
+	hlt
 	jmp $
 
 font: incbin "Inconsolata-16b.psf" 
