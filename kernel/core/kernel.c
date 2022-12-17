@@ -1,6 +1,3 @@
-#include "include.h"
-#include "../video/include.h"
-
 struct memoryMap {
 	void *mmap;
 	void *kernel;
