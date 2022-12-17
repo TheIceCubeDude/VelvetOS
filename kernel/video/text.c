@@ -10,17 +10,17 @@ struct psf {
 	unsigned long height, width;
 } __attribute__ ((packed));
 
-struct psf *rawFont;
-unsigned char *glyphs;
-unsigned long bgColour;
-unsigned long fgColour;
+static struct psf *rawFont;
+static unsigned char *glyphs;
+static unsigned long bgColour;
+static unsigned long fgColour;
 
-unsigned short cursorX = 0;
-unsigned short cursorY = 0;
-const unsigned short CONSOLE_WIDTH = 64;
-const unsigned short CONSOLE_HEIGHT = 32;
-unsigned short CONSOLE_SCALE_X;
-unsigned short CONSOLE_SCALE_Y;
+static unsigned short cursorX = 0;
+static unsigned short cursorY = 0;
+static const unsigned short CONSOLE_WIDTH = 64;
+static const unsigned short CONSOLE_HEIGHT = 32;
+static unsigned short CONSOLE_SCALE_X;
+static unsigned short CONSOLE_SCALE_Y;
 
 void loadFont(char *font) {
 	rawFont = (struct psf*)font;
@@ -38,18 +38,24 @@ void loadFont(char *font) {
 	return;
 }
 
-void initConsole(unsigned long width, unsigned long height) {
+void consoleInit(unsigned long width, unsigned long height) {
 	CONSOLE_SCALE_X = width / (CONSOLE_WIDTH * rawFont->width);
 	CONSOLE_SCALE_Y = height / (CONSOLE_HEIGHT * rawFont->height);
 	return;
 }
 
-void putChar(char *character, unsigned short x, unsigned short y, unsigned short scalex, unsigned short scaley) {
+void resetCursor() {
+	cursorX = 0;
+	cursorY = 0;
+	return;
+}
+
+static void putChar(char *character, unsigned short x, unsigned short y, unsigned short scalex, unsigned short scaley) {
 	for (short i=0; i<rawFont->height; i++) {
 		for (short j=0; j<rawFont->width; j++) {
 			if (*(glyphs + i + *character * rawFont->bytesPerGlyph) & 0x80>>j) {
 				putScaledPixel(j + x, i + y, scalex, scaley, fgColour);
-			} else if (!(bgColour == 0x80000000)) {
+			} else if (!(bgColour == TRANSPARENT_COLOUR)) {
 				putScaledPixel(j + x, i + y, scalex, scaley, bgColour);
 			}
 		}
@@ -74,26 +80,9 @@ void printf(char *string) {
 	}
 	cursorY++;
 	cursorX = 0;
+	if (doubleBuffering) {swapBufs();}
 	return;
 }
-
-//Print hex
-//void printInt(unsigned int value) {
-//	unsigned short length = 1;
-//	unsigned int digit;
-//	unsigned int val = value;
-//	while (1) {
-//		val = val / 10;
-//		if (val) {length++;} else {break;}
-//	}
-//	unsigned char string[length];
-//	for (int i=0; i<length; i++) {
-//		digit = value % (10^i);
-//		string[i] = digit + 0x30;
-//	}
-//	printf(string);
-//	return;
-//}
 
 void printHex(unsigned long value) {
 	char reverseString[32];
@@ -142,4 +131,5 @@ void printDec(unsigned long value) {
 void setTextColours(unsigned long bg, unsigned long fg) {
 	bgColour = bg;
 	fgColour = fg;
+	return;
 }

@@ -8,7 +8,7 @@ mmap:
 	.stack:			dd 0
 	.stackSize:		dd 2087152
 	.heap:			dd 0
-	.heapSize:		dd 5242880 + 3 ;; 3 bytes for alignment room
+	.heapSize:		dd 99999999;;5242880 + 3 ;; 3 bytes for alignment room
 
 fbInfo:
 	.framebuffer:		dd 0

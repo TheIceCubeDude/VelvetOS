@@ -297,11 +297,11 @@ prepMmap:
 	push ebx
 	push eax
 	mov edx, 0
-	mov ebx, 4
+	mov ebx, 16
 	div ebx
 	cmp edx, 0
 	je .alignMemOptimal
-	mov eax, 4
+	mov eax, 16
 	sub eax, edx
 	mov edx, eax
 	pop eax

@@ -2,7 +2,13 @@
 
 extern kmain
 global _start
+
+global halt
 global font
+
+global enableSSE
+global memcpy
+global memset
 
 _start:
 	;; Setup segments
@@ -30,11 +36,15 @@ _start:
 	push ebx
 	push ecx
 	call kmain
+	jmp halt
+
+halt:
 	hlt
-	jmp $
+	jmp halt
 
 font: incbin "Inconsolata-16b.psf" 
 
+%include "kernel/core/memory.asm"
 %include "structures/coreinfo.asm"
 %include "structures/gdt.asm"
 
