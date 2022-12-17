@@ -6,10 +6,6 @@ global _start
 global halt
 global font
 
-global enableSSE
-global memcpy
-global memset
-
 _start:
 	;; Setup segments
 	mov ax, 0x10

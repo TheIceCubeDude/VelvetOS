@@ -1,3 +1,7 @@
+global enableSSE
+global memcpy
+global memset
+
 enableSSE:
 	push ebx
 	;; Test for SSE 2.0  presence (26th bit.  SSE 1.0 is 25th bit)

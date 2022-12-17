@@ -1,14 +1,14 @@
-static char *heapAddress;
+static void *heapAddress;
 
-void setHeap(char *address) {
+void setHeap(void *address) {
 	heapAddress = address;
 	return;
 }
 
-char* malloc(unsigned long size) {
+void* malloc(uint32_t size) {
 	return heapAddress;
 }
 
-void free(char* objectAddress) {
+void free(void* objectAddress) {
 	return;
 }

@@ -1,14 +1,14 @@
-static unsigned short width;
-static unsigned short height;
-static unsigned short BPL;
-static unsigned long size;
-static unsigned long *trueFramebuffer;
-static unsigned long *framebuffer;
+static uint16_t width;
+static uint16_t height;
+static uint16_t BPL;
+static uint32_t size;
+static uint32_t *trueFramebuffer;
+static uint32_t *framebuffer;
 
-static const unsigned int PIXEL_WIDTH = sizeof(unsigned long);
-unsigned char doubleBuffering = 0;
+static const uint8_t PIXEL_WIDTH = sizeof(uint32_t);
+static uint8_t doubleBuffering = 0;
 
-void videoInit(unsigned short fbWidth, unsigned short fbHeight, unsigned short fbBPL, unsigned long fbSize, unsigned long* fb) {
+void videoInit(uint16_t fbWidth, uint16_t fbHeight, uint16_t fbBPL, uint32_t fbSize, uint32_t *fb) {
 	width = fbWidth;
 	height = fbHeight;
 	BPL = fbBPL;
@@ -18,26 +18,26 @@ void videoInit(unsigned short fbWidth, unsigned short fbHeight, unsigned short f
 	return;
 }
 
-void putPixel(unsigned short x, unsigned short y, unsigned long colour) {
-	unsigned long *ptr = (unsigned long*) framebuffer + y*BPL/PIXEL_WIDTH + x;
+void putPixel(uint16_t x, uint16_t y, uint32_t colour) {
+	uint32_t *ptr = (uint32_t*) framebuffer + y*BPL/PIXEL_WIDTH + x;
 	*ptr = colour;
 	return;
 }
 
-unsigned long getPixel(unsigned short x, unsigned short y) {
-	unsigned long *ptr = (unsigned long*) framebuffer + y*BPL/PIXEL_WIDTH + x;
+uint32_t getPixel(uint16_t x, uint16_t y) {
+	uint32_t *ptr = (uint32_t*) framebuffer + y*BPL/PIXEL_WIDTH + x;
 	return *ptr;
 }
 
-void fillScreen(unsigned long colour) {
-	memset((char*)framebuffer, colour, size);
+void fillScreen(uint32_t colour) {
+	memset((uint8_t*)framebuffer, colour, size);
 	return;
 }
 
-void putScaledPixel(unsigned short x, unsigned short y, unsigned short scalex, unsigned short scaley, unsigned long colour) {
-	unsigned long *ptr = (unsigned long*) framebuffer + y*scaley*BPL/PIXEL_WIDTH + x*scalex;
-	for (int i=0; i<scaley; i++) {
-		for (int j=0; j<scalex; j++) {
+void putScaledPixel(uint16_t x, uint16_t y, uint16_t scalex, uint16_t scaley, uint32_t colour) {
+	uint32_t *ptr = (uint32_t*) framebuffer + y*scaley*BPL/PIXEL_WIDTH + x*scalex;
+	for (uint16_t i=0; i<scaley; i++) {
+		for (uint16_t j=0; j<scalex; j++) {
 			*(ptr + j + (i*BPL/PIXEL_WIDTH)) = colour;
 		}
 	}
@@ -45,26 +45,26 @@ void putScaledPixel(unsigned short x, unsigned short y, unsigned short scalex, u
 }
 
 void enableDoubleBuffering() {
-	framebuffer = (unsigned long*) malloc(size);
+	framebuffer = (uint32_t*) malloc(size);
 	doubleBuffering = 1;
 	fillScreen(0);
 	return;
 }
 
 void disableDoubleBuffering() {
-	free((char*)framebuffer);
+	free(framebuffer);
 	framebuffer = trueFramebuffer;
 	doubleBuffering = 0;
 	return;
 }
 
 void swapBufs() {
-	memcpy((char*)trueFramebuffer, (char*)framebuffer, size);
+	memcpy(trueFramebuffer, framebuffer, size);
 	return;
 }
 
-void _scrollY(unsigned int scale) {
-	memcpy((char*)framebuffer, ((char*)framebuffer) + (scale * BPL), size - (scale * BPL));
+void _scrollY(uint16_t scale) {
+	memcpy(framebuffer, ((char*)framebuffer) + (scale * BPL), size - (scale * BPL));
 	memset((char*)framebuffer + size - (scale * BPL), 0, scale * BPL);
 	return;
 }

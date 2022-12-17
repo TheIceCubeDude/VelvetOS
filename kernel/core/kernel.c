@@ -1,55 +1,48 @@
-void halt();
-void kpanic(char *cause);
-char enableSSE();
-void memcpy(char *destination, char *source, unsigned long size);
-unsigned int memset(char *destination, unsigned long x, unsigned long size);
-
-#include "core/heap.c"
-#include "video/graphics.c"
-#include "video/text.c"
+#include "include.h"
+#include "../video/include.h"
 
 struct memoryMap {
-	char *mmap;
-	char *kernel;
-	unsigned long kernelSize;
-	char *code;
-	unsigned long codeSize;
-	char *stack;
-	unsigned long stackSize;
-	char *heap;
-	unsigned long heapSize;
+	void *mmap;
+	void *kernel;
+	uint32_t kernelSize;
+	void *code;
+	uint32_t codeSize;
+	void *stack;
+	uint32_t stackSize;
+	void *heap;
+	uint32_t heapSize;
 } __attribute__ ((packed));
 struct framebufferInfo {
-	unsigned long *framebuffer;
-	unsigned long framebufferSize;
-	unsigned short framebufferWidth;
-	unsigned short framebufferHeight;
-	unsigned short framebufferBPL;
+	uint32_t *framebuffer;
+	uint32_t  framebufferSize;
+	uint16_t framebufferWidth;
+	uint16_t framebufferHeight;
+	uint16_t framebufferBPL;
 } __attribute__ ((packed));
 
 static struct memoryMap *mmap;
 static struct framebufferInfo *fbInfo;
 
-void kpanic(char* cause) {
+void kpanic(uint8_t* cause) {
 	//TODO: also implement double buffering by first implementing malloc and free and calloc
 	//	also allocate segment sizes based on memory avaliable rather than hardcoding it
 	setTextColours(0x00FF0000, 0x00FFFFFF);
 	printf("Kernel Panic!!!");
 	setTextColours(0x00A00000, 0x00FFFFFF);
 	printf("Kernel offset & size:");
-	printHex((unsigned long) mmap->kernel);
+	printHex((uint32_t) mmap->kernel);
 	printHex(mmap->kernelSize);
 	printf("Stack offset & size:");
-	printHex((unsigned long) mmap->stack);
+	printHex((uint32_t) mmap->stack);
 	printHex(mmap->stackSize);
 	printf("Heap offset & size:");
-	printHex((unsigned long) mmap->heap);
+	printHex((uint32_t) mmap->heap);
 	printHex(mmap->heapSize);
 	printf("Program code offset & size:");
-	printHex((unsigned long) mmap->code);
+	printHex((uint32_t) mmap->code);
 	printHex(mmap->codeSize);
 	printf("VESA VBE framebuffer offset & size:");
-	printHex((unsigned long)fbInfo->framebuffer);
+	printHex((uint32_t)fbInfo->framebuffer);
 	printHex(fbInfo->framebufferSize);
 	printf("VESA VBE framebuffer width, height and Bytes Per Line (BPL)");
 	printDec(fbInfo->framebufferWidth);
@@ -68,14 +61,14 @@ void _singleBufPrint() {
 	return;
 }
 
-extern void kmain(struct memoryMap *mmapParam, struct framebufferInfo *fbInfoParam, char *font) {
+extern void kmain(struct memoryMap *mmapParam, struct framebufferInfo *fbInfoParam, void *font) {
 	mmap = mmapParam;
 	fbInfo = fbInfoParam;
 	setHeap(mmap->heap);
 
 	//Init graphics
 	videoInit(fbInfo->framebufferWidth, fbInfo->framebufferHeight, fbInfo->framebufferBPL, fbInfo->framebufferSize, fbInfo->framebuffer);
-	loadFont((unsigned char*) ((unsigned long)mmap->kernel + (unsigned long)font));
+	loadFont((void*) ((uint32_t)mmap->kernel + (uint32_t)font));
 	consoleInit(fbInfo->framebufferWidth, fbInfo->framebufferHeight);
 	
 	_singleBufPrint();
