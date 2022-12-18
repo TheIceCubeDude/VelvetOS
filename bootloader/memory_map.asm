@@ -1,5 +1,6 @@
 mMap_prepareMemory:
 	call getMemoryMap
+	call getMmapSizes
 	call prepMmap
 	ret
 
@@ -223,6 +224,64 @@ getMemoryMap:
 	.msg0: db "Failed to get memory map!", 0
 	.msg1: db "Successfully got memory map!", 0
 
+getMmapSizes:
+	;; Set mmap values based on memory map
+	mov ax, [getMemoryMap.tmpSeg]
+	mov es, ax
+	mov di, 0
+	mov bx, 0
+	mov ecx, 0
+	;;inc bp
+
+	call .findMem
+
+	;; Reserve for coreinfo and kernel
+	sub ecx, coreinfoSize
+	sub ecx, [mmap.kernelSize]
+	
+	;; 1/30 for heap, 1/30 for code, and 1/30 for stack
+	mov eax, ecx
+	mov edx, 0
+	mov ecx, 30
+	div ecx
+	mov [mmap.heapSize], eax
+	mov [mmap.codeSize], eax
+	mov [mmap.stackSize], eax
+	ret
+
+	.findMem:
+	;; Check if we are at the end of the list
+	cmp bp, bx
+	je .ret
+	inc bx
+
+	;; Check mem's base address fits in 32 bits
+	mov eax, dword [es:di+4]
+	cmp eax, 0
+	je .accessableMem
+	jmp .checkNextMem
+
+	.accessableMem:
+	;; Check memory is usable
+	mov eax, dword [es:di + 16]
+	cmp eax, 1
+	jne .checkNextMem
+	;; Check memory is high memory (prevent bootloader being overriden)
+	mov eax, dword [es:di]
+	cmp eax, 1048576
+	jl .checkNextMem
+	jmp .usableMem
+
+	.usableMem:
+	add ecx, [es:di + 12]
+	jmp .checkNextMem
+
+	.checkNextMem:
+	add di, 24
+	jmp .findMem
+
+	.ret: ret
+
 prepMmap:
 	;; Set mmap values based on memory map
 	mov ax, [getMemoryMap.tmpSeg]
@@ -259,7 +318,7 @@ prepMmap:
 
 	ret
 
-	.minRamErr: db "Not enough RAM!", 0
+	.minRamErr: db "RAM is too fragmented!", 0
 	.mmapPrepSuccess: db "Memory map succesfully prepared!", 0
 
 	.findMem:

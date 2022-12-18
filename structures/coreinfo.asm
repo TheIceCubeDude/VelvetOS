@@ -2,14 +2,13 @@ coreinfo:
 mmap:	
 	.coreinfo:		dd 0
 	.kernel:		dd 0
-	.kernelSize:		dd 1048576 + 3 ;; 3 bytes for alignment room
+	.kernelSize:		dd 1048576 + 15
 	.code:			dd 0
-	.codeSize:		dd 5242880 + 3 ;; 3 bytes for alignment room
+	.codeSize:		dd 0 ;;5242880 + 15
 	.stack:			dd 0
-	.stackSize:		dd 2087152
+	.stackSize:		dd 0 ;;2087152 + 15
 	.heap:			dd 0
-	.heapSize:		dd 99999999;;5242880 + 3 ;; 3 bytes for alignment room
-
+	.heapSize:		dd 0
 fbInfo:
 	.framebuffer:		dd 0
 	.framebufferSize:	dd 0
