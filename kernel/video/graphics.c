@@ -46,6 +46,10 @@ void putScaledPixel(uint16_t x, uint16_t y, uint16_t scalex, uint16_t scaley, ui
 
 void enableDoubleBuffering() {
 	framebuffer = (uint32_t*) malloc(size);
+	if (!framebuffer) {
+		framebuffer = trueFramebuffer;
+		kpanic("Not enough space on heap to allocate a framebuffer!");
+	}
 	doubleBuffering = 1;
 	fillScreen(0);
 	return;

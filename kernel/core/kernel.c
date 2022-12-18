@@ -62,6 +62,7 @@ extern void kmain(struct memoryMap *mmapParam, struct framebufferInfo *fbInfoPar
 	mmap = mmapParam;
 	fbInfo = fbInfoParam;
 	setHeap(mmap->heap);
+	makeHeap(mmap->heapSize);
 
 	//Init graphics
 	videoInit(fbInfo->framebufferWidth, fbInfo->framebufferHeight, fbInfo->framebufferBPL, fbInfo->framebufferSize, fbInfo->framebuffer);
@@ -78,6 +79,7 @@ extern void kmain(struct memoryMap *mmapParam, struct framebufferInfo *fbInfoPar
 	_singleBufPrint();
 	printf("SSE enabled.");
 	printf("Double buffering enabled.");
+
 	for (int i=0; i<30; i++) {
 		printDec(i);
 	}
