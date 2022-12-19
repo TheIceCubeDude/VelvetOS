@@ -1,7 +1,7 @@
 mMap_prepareMemory:
 	call getMemoryMap
+	mov ecx, 3
 	call getMmapSizes
-	call prepMmap
 	ret
 
 mMap_relocateCoreinfo:
@@ -226,6 +226,7 @@ getMemoryMap:
 
 getMmapSizes:
 	;; Set mmap values based on memory map
+	push ecx
 	mov ax, [getMemoryMap.tmpSeg]
 	mov es, ax
 	mov di, 0
@@ -239,15 +240,15 @@ getMmapSizes:
 	sub ecx, coreinfoSize
 	sub ecx, [mmap.kernelSize]
 	
-	;; 1/30 for heap, 1/30 for code, and 1/30 for stack
+	;; Certain fraction of memory for each thing
 	mov eax, ecx
 	mov edx, 0
-	mov ecx, 30
+	pop ecx
 	div ecx
 	mov [mmap.heapSize], eax
 	mov [mmap.codeSize], eax
 	mov [mmap.stackSize], eax
-	ret
+	jmp prepMmap
 
 	.findMem:
 	;; Check if we are at the end of the list
@@ -283,6 +284,14 @@ getMmapSizes:
 	.ret: ret
 
 prepMmap:
+	push ecx
+	;; Zero out potentially set values in mmap
+	mov [mmap.kernel], dword 0
+	mov [mmap.coreinfo], dword 0
+	mov [mmap.heap], dword 0
+	mov [mmap.stack], dword 0
+	mov [mmap.code], dword 0
+
 	;; Set mmap values based on memory map
 	mov ax, [getMemoryMap.tmpSeg]
 	mov es, ax
@@ -293,24 +302,24 @@ prepMmap:
 
 	call .findMem
 
-	;;Check there is enough RAM
+	;;Checks
 	;; (All segment should have been allocated)
-	mov dx, .minRamErr
+	pop ecx
 	mov eax, dword [mmap.kernel]
 	cmp eax, 0
-	je textErr
+	je .notEnoughMem
 	mov eax, dword [mmap.coreinfo]
 	cmp eax, 0
-	je textErr
+	je .notEnoughMem
 	mov eax, dword [mmap.heap]
 	cmp eax, 0
-	je textErr
+	je .memTooFragmented
 	mov eax, dword [mmap.stack]
 	cmp eax, 0
-	je textErr
+	je .memTooFragmented
 	mov eax, dword [mmap.code]
 	cmp eax, 0
-	je textErr
+	je .memTooFragmented
 
 	mov dx, .mmapPrepSuccess
 	mov bx, 00000010b
@@ -318,8 +327,24 @@ prepMmap:
 
 	ret
 
-	.minRamErr: db "RAM is too fragmented!", 0
+	.minRamErr: db "Not enough RAM!", 0
+	.fragmentedMsg: db "Memory is too fragmented, allocating less memory (expect this many times)", 0
 	.mmapPrepSuccess: db "Memory map succesfully prepared!", 0
+
+	.notEnoughMem:
+	mov dx, .minRamErr
+	call textErr
+
+	.memTooFragmented:
+	push ecx
+	push bp
+	mov bl, 00001110b
+	mov dx, .fragmentedMsg
+	call textPrint
+	pop bp
+	pop ecx
+	inc ecx
+	jmp getMmapSizes
 
 	.findMem:
 	;; Check if we are at the end of the list
@@ -378,7 +403,7 @@ prepMmap:
 
 	.kernelCheck:
 	;; Check we havn't already set kernelSeg
-	cmp word [mmap.kernel], 0
+	cmp dword [mmap.kernel], 0
 	jne .coreinfoCheck
 	;; Check this mem is big enough for kernelSeg
 	cmp eax,[mmap.kernelSize]
@@ -399,7 +424,7 @@ prepMmap:
 
 	.coreinfoCheck:
 	;;Check we haven't already set coreinfoSeg
-	cmp word [mmap.coreinfo], 0
+	cmp dword [mmap.coreinfo], 0
 	jne .heapCheck
 	;;Check this mem is big enough for coreinfoSeg
 	cmp eax, coreinfo

@@ -1,5 +1,5 @@
 [BITS 16]
-[ORG 0x7C00]
+[ORG 0x7c00]
 
 main:	
 	cli

@@ -26,13 +26,11 @@ void loadFont(void *font) {
 	rawFont = (struct psf*)font;
 	//Check valid .psf v2 font
 	if (!(rawFont->magic == 0x864ab572)) {
-		fillScreen(0x00FF0000);
-		return;
+		halt();
 	}
 	//Check 8*17
 	if (!(rawFont->width==8 && rawFont->height==17)) {
-		fillScreen(0x000000FF);
-		return;
+		halt();
 	}
 	glyphs = (uint8_t*)rawFont + rawFont->headerSize;
 	return;
