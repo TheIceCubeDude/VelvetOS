@@ -21,8 +21,14 @@ mMap_relocateCoreinfo:
 mMap_loadKernel:
 	;; We will load 4KB of the kernel at a time to tmp
 	;; After each 4KB framgment has been loaded, we copy it to kernelSeg
-	;; Firstly, find out how many fragments we will have
 	push dx
+	;; Before anything, check extended int 13h functions are supported
+	mov ah, 0x41
+	mov bx, 0x55AA
+	int 0x13
+	jc .unsupported
+
+	;; Firstly, find out how many fragments we will have
 	mov eax, [mmap.kernelSize]
 	mov edx, 0
 	mov ecx, 4096
@@ -40,6 +46,12 @@ mMap_loadKernel:
 	ret
 
 	.kernelLoaded: db "Kernel succesfully loaded from boot media!", 0
+
+	.unsupported:
+	mov dx, .unsupportedErr
+	call textErr
+
+	.unsupportedErr: db "Int 13h extentions not supported on this BIOS!", 0
 
 	.loadFragmentsLoop:
 	;; Load fragment off disk to tmp
@@ -214,8 +226,6 @@ getMemoryMap:
 	call textErr
 
 	.success:
-	;; TODO: merge overlapping or adjacent free memory
-	;; Hackily converts text to numbers, assuming there are under 10 entries
 	mov dx, .msg1
 	mov bl, 00000010b
 	call textPrint
