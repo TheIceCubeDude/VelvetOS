@@ -115,6 +115,20 @@ findBestMode:
 	mov dl, byte[VBEModeInfoStruct.bpp]
 	cmp dl, desiredBpp
 	jne .ret
+
+	;; Check mask sizes and field positions for pixel format
+	cmp [VBEModeInfoStruct.redMask], byte 8
+	jne .ret
+	cmp [VBEModeInfoStruct.greenMask], byte 8
+	jne .ret
+	cmp [VBEModeInfoStruct.blueMask], byte 8
+	jne .ret
+	cmp [VBEModeInfoStruct.redPosition], byte 16
+	jne .ret
+	cmp [VBEModeInfoStruct.greenPosition], byte 8
+	jne .ret
+	cmp [VBEModeInfoStruct.bluePosition], byte 0
+	jne .ret
 	
 	;; Calculate resolution -> width * height [maybe in the future factor in bpp? But for now that results in an enourmous number so we won't do that]
 	push eax
@@ -162,7 +176,6 @@ findBestMode:
 	call textErr
 
 	.modeInfoErr:
-	;; Converts number to text very hackily
 	push edx
 	mov dx, .msg2
 	mov bl, 00001110b
