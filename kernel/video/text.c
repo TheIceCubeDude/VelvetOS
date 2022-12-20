@@ -1,5 +1,3 @@
-#define TRANSPARENT_COLOUR 0x80000000
-
 struct psf {
 	uint32_t magic;
 	uint32_t version;

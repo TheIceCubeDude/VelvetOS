@@ -280,7 +280,7 @@ getMmapSizes:
 	;; Check memory is high memory (prevent bootloader being overriden)
 	mov eax, dword [es:di]
 	cmp eax, 1048576
-	jl .checkNextMem
+	jb .checkNextMem
 	jmp .usableMem
 
 	.usableMem:
@@ -376,7 +376,7 @@ prepMmap:
 	;; Check memory is high memory (prevent bootloader being overriden)
 	mov eax, dword [es:di]
 	cmp eax, 1048576
-	jl .checkNextMem
+	jb .checkNextMem
 	jmp .usableMem
 
 	.usableMem:
@@ -416,8 +416,8 @@ prepMmap:
 	cmp dword [mmap.kernel], 0
 	jne .coreinfoCheck
 	;; Check this mem is big enough for kernelSeg
-	cmp eax,[mmap.kernelSize]
-	jge .setKernel
+	cmp eax, [mmap.kernelSize]
+	jae .setKernel
 	jmp .coreinfoCheck
 	
 	.setKernel:
@@ -438,7 +438,7 @@ prepMmap:
 	jne .heapCheck
 	;;Check this mem is big enough for coreinfoSeg
 	cmp eax, coreinfo
-	jge .setCoreinfo
+	jae .setCoreinfo
 	jmp .heapCheck
 	
 	.setCoreinfo: 
@@ -453,7 +453,7 @@ prepMmap:
 	jne .stackCheck
 	;;Check this mem is big enough for heapSeg
 	cmp eax, [mmap.heapSize]
-	jge .setHeap
+	jae .setHeap
 	jmp .stackCheck
 
 	.setHeap:
@@ -474,7 +474,7 @@ prepMmap:
 	jne .codeCheck
 	;;Check this mem is big enough for stackSeg
 	cmp eax, [mmap.stackSize]
-	jge .setStack
+	jae .setStack
 	jmp .codeCheck
 
 	.setStack:
@@ -489,7 +489,7 @@ prepMmap:
 	jne .checkNextMem
 	;; Check this mem is big enough for codeSeg
 	cmp eax, [mmap.codeSize]
-	jge .setCode
+	jae .setCode
 	jmp .checkNextMem
 	
 	.setCode:

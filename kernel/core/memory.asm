@@ -18,6 +18,7 @@ enableSSE:
 	or ax, 3<<9
 	mov cr4, eax
 	mov eax, 1
+	mov edx, 0
 	pop ebx
 	ret
 
@@ -100,23 +101,19 @@ memcpy:
 	jmp .copyAligned
 	
 	.copyAligned:
-	movaps xmm0, [ebx + ecx]
-	movaps [eax + ecx], xmm0
+	movdqa xmm0, [ebx + ecx]
+	movdqa [eax + ecx], xmm0
 	add ecx, edx
 	cmp ecx, ebp
-	jne .copyAligned
-	movaps xmm0, [ebx + ecx]
-	movaps [eax + ecx], xmm0
+	jbe .copyAligned
 	jmp .ret
 
 	.copyUnaligned:
-	movups xmm0, [ebx + ecx]
-	movups [eax + ecx], xmm0
+	movdqu xmm0, [ebx + ecx]
+	movdqu [eax + ecx], xmm0
 	add ecx, edx
 	cmp ecx, ebp
-	jne .copyUnaligned
-	movups xmm0, [ebx + ecx]
-	movups [eax + ecx], xmm0
+	jbe .copyUnaligned
 	jmp .ret
 
 	.ret: 
@@ -201,19 +198,17 @@ memset:
 	jmp .unalignedSet
 
 	.alignedSet:
-	movaps [eax + ebp], xmm0
+	movdqa [eax + ebp], xmm0
 	add ebp, edx
 	cmp ebp, ecx
-	jne .alignedSet
-	movaps [eax + ebp], xmm0
+	jbe .alignedSet
 	jmp .ret
 
 	.unalignedSet:
-	movups [eax + ebp], xmm0
+	movdqu [eax + ebp], xmm0
 	add ebp, edx
 	cmp ebp, ecx
-	jne .unalignedSet
-	movups [eax + ebp], xmm0
+	jbe .unalignedSet
 	jmp .ret
 
 	.ret: 

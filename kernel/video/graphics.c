@@ -30,7 +30,7 @@ uint32_t getPixel(uint16_t x, uint16_t y) {
 }
 
 void fillScreen(uint32_t colour) {
-	memset((uint8_t*)framebuffer, colour, size);
+	memset(framebuffer, colour, size);
 	return;
 }
 

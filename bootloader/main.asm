@@ -91,6 +91,7 @@ enterVGAMode:
 	.msg3: db "Couldn't enter VGA mode 12h. Will proceed with boot anyways.", 0
 
 enterPMode:
+	cli
 	;; ECX contains location of mmap
 	mov ecx, [mmap.coreinfo]
 	;; EBX contains location of fbInfo

@@ -21,8 +21,6 @@ static struct memoryMap *mmap;
 static struct framebufferInfo *fbInfo;
 
 void kpanic(uint8_t* cause) {
-	//TODO: also implement double buffering by first implementing malloc and free and calloc
-	//	also allocate segment sizes based on memory avaliable rather than hardcoding it
 	setTextColours(0x00FF0000, 0x00FFFFFF);
 	printf("Kernel Panic!!!");
 	setTextColours(0x00A00000, 0x00FFFFFF);
@@ -80,9 +78,6 @@ extern void kmain(struct memoryMap *mmapParam, struct framebufferInfo *fbInfoPar
 	printf("SSE enabled.");
 	printf("Double buffering enabled.");
 
-	for (int i=0; i<30; i++) {
-		printDec(i);
-	}
 	kpanic("OS halted.");
 	return;
 }
