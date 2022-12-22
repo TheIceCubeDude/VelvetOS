@@ -11,14 +11,6 @@ struct idtDescriptor {
 	void *offset;
 } __attribute__ ((packed));
 
-struct interruptFrame {
-	uint32_t eip;
-	uint32_t cs;
-	uint32_t flags;
-	uint32_t esp;
-	uint32_t ss;
-};
-
 static struct idtEntry *idt;
 static struct idtDescriptor idtr;
 
@@ -40,10 +32,22 @@ void idtInit() {
 		}
 	}
 	for (uint8_t i=32; i<40; i++) {
-		addInterrupt(i, INTERRUPT_ATTRIBUTES, (void*) unhandledMasterIrqHandler);
+		switch (i) {
+			case 39:
+				addInterrupt(i, INTERRUPT_ATTRIBUTES, (void*) spuriousMasterIrqHandler);
+				break;
+			default:
+				addInterrupt(i, INTERRUPT_ATTRIBUTES, (void*) unhandledMasterIrqHandler);
+		}
 	}
 	for (uint8_t i=40; i<48; i++) {
-		addInterrupt(i, INTERRUPT_ATTRIBUTES, (void*) unhandledSlaveIrqHandler);
+		switch (i) {
+			case 47:
+				addInterrupt(i, INTERRUPT_ATTRIBUTES, (void*) spuriousSlaveIrqHandler);
+				break;
+			default:
+				addInterrupt(i, INTERRUPT_ATTRIBUTES, (void*) unhandledSlaveIrqHandler);
+		}
 	}
 	for (uint8_t i=48; i<255; i++) {
 		addInterrupt(i, INTERRUPT_ATTRIBUTES, (void*) unhandledInterruptHandler);
@@ -126,6 +130,19 @@ void unhandledSlaveIrqHandler(struct interruptFrame *frame) {
 __attribute__ ((interrupt))
 void unhandledInterruptHandler(struct interruptFrame *frame) {
 	printf("An unhandled interrupt has been called!");
+	return;
+}
+
+__attribute__ ((interrupt))
+void spuriousMasterIrqHandler(struct interruptFrame *frame) {
+	//Don't send End Of Interrupt for spurious interrupts
+	return;
+}
+
+__attribute__ ((interrupt))
+void spuriousSlaveIrqHandler(struct interruptFrame *frame) {
+	//Master PIC doesn't know the interrupt was spurious, so we need to send End Of Interrupt
+	returnMasterIrq();
 	return;
 }
 

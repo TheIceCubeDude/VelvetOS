@@ -58,6 +58,7 @@ void _singleBufPrint() {
 }
 
 extern void kmain(struct memoryMap *mmapParam, struct framebufferInfo *fbInfoParam, void *font) {
+	//Setup some base stuff
 	mmap = mmapParam;
 	fbInfo = fbInfoParam;
 	setHeap(mmap->heap);
@@ -80,7 +81,19 @@ extern void kmain(struct memoryMap *mmapParam, struct framebufferInfo *fbInfoPar
 	//Init interrupts
 	idtInit();
 	printf("Interrupts have been set up.");
-	kpanic("OS halted.");
+
+	//Init Programmable Interval Timer
+	initPit();
+	printf("PIT has been set up.");
+	printf("Waiting 3 seconds...");
 	enableIrqs();
+	printDec(3);
+	while (getTime()/1000 < 1) {}
+	printDec(2);
+	while (getTime()/1000 < 2) {}
+	printDec(1);
+	while (getTime()/1000 < 3) {}
+
+	kpanic("OS halted.");
 	return;
 }

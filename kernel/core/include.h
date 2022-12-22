@@ -32,7 +32,13 @@ uint32_t inl(uint16_t port);
 #define PIC1_DATA 0x21
 #define PIC2_DATA 0xA1
 
-struct interruptFrame;
+struct interruptFrame {
+	uint32_t eip;
+	uint32_t cs;
+	uint32_t flags;
+	uint32_t esp;
+	uint32_t ss;
+};
 void idtInit();
 void addInterrupt(uint8_t vector, uint8_t attributes, void *address);
 void reprogramPic();
@@ -57,5 +63,9 @@ __attribute__ ((interrupt))
 void unhandledMasterIrqHandler(struct interruptFrame *frame);
 __attribute__ ((interrupt))
 void unhandledSlaveIrqHandler(struct interruptFrame *frame);
+__attribute__ ((interrupt))
+void spuriousMasterIrqHandler(struct interruptFrame *frame);
+__attribute__ ((interrupt))
+void spuriousSlaveIrqHandler(struct interruptFrame *frame);
 __attribute__ ((interrupt))
 void doubleFaultHandler(struct interruptFrame *frame);

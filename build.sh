@@ -11,9 +11,10 @@ echo Compiling kernel
 # Every [kernel_module.c] should include its own [include.h], which is useful if it uses assembly routines defined in a c prototype.
 i686-elf-gcc -c -ffreestanding -fPIE -mgeneral-regs-only -o build/kernel/core.o kernel/core/core.c
 i686-elf-gcc -c -ffreestanding -fPIE -o build/kernel/video.o kernel/video/video.c
+i686-elf-gcc -c -ffreestanding -fPIE -mgeneral-regs-only -o build/kernel/pit.o kernel/pit/pit.c
 
 echo Linking kernel
-i686-elf-gcc -T script.ld -nostdlib -lgcc -o build/kernel.elf build/kernel/main.o build/kernel/core.o build/kernel/video.o
+i686-elf-gcc -T script.ld -nostdlib -lgcc -o build/kernel.elf build/kernel/main.o build/kernel/core.o build/kernel/video.o build/kernel/pit.o
 
 echo Creating final image
 i686-elf-objcopy -O binary build/kernel.elf build/kernel.bin
@@ -21,4 +22,4 @@ truncate -s 1M build/kernel.bin
 cat build/bootloader.bin build/kernel.bin> OS.img
 
 echo Starting QEMU
-qemu-system-x86_64 -hda OS.img -m 512
+qemu-system-i386 -hda OS.img -m 512
