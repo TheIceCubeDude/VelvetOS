@@ -7,8 +7,7 @@ void enableDoubleBuffering();
 void disableDoubleBuffering();
 void swapBufs();
 
-void loadFont(void *font);
-void consoleInit(uint32_t width, uint32_t height);
+void consoleInit(void *font);
 void resetCursor();
 void printf(uint8_t *string);
 void printHex(uint32_t value);

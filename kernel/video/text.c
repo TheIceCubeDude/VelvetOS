@@ -20,21 +20,18 @@ static const uint16_t CONSOLE_HEIGHT = 32;
 static uint16_t CONSOLE_SCALE_X;
 static uint16_t CONSOLE_SCALE_Y;
 
-void loadFont(void *font) {
+void consoleInit(void *font) {
 	rawFont = (struct psf*)font;
 	//Check valid .psf v2 font
 	if (!(rawFont->magic == 0x864ab572)) {
 		halt();
 	}
-	//Check 8*17
+	//Check resolution is 8*17
 	if (!(rawFont->width==8 && rawFont->height==17)) {
 		halt();
 	}
 	glyphs = (uint8_t*)rawFont + rawFont->headerSize;
-	return;
-}
 
-void consoleInit(uint32_t width, uint32_t height) {
 	CONSOLE_SCALE_X = width / (CONSOLE_WIDTH * rawFont->width);
 	CONSOLE_SCALE_Y = height / (CONSOLE_HEIGHT * rawFont->height);
 	return;

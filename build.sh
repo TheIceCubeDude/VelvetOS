@@ -9,7 +9,7 @@ echo Compiling kernel
 # Every kernel module should contain [include.h], containing all its function prototypes.
 # Every [kernel_module.c] should include the core module's [include.h] - [../core/include.h].
 # Every [kernel_module.c] should include its own [include.h], which is useful if it uses assembly routines defined in a c prototype.
-i686-elf-gcc -c -ffreestanding -fPIE -o build/kernel/core.o kernel/core/core.c
+i686-elf-gcc -c -ffreestanding -fPIE -mgeneral-regs-only -o build/kernel/core.o kernel/core/core.c
 i686-elf-gcc -c -ffreestanding -fPIE -o build/kernel/video.o kernel/video/video.c
 
 echo Linking kernel

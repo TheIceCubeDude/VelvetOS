@@ -14,9 +14,7 @@ _start:
 	mov es, ax
 	mov fs, ax
 	mov gs, ax
-	;;Reload GDT again so that it is in high memory
-	mov eax, [mmap.kernel - coreinfo + ecx]
-	lgdt [gdtr + eax]
+
 	;; Setup stack (ECX contains location of mmap, EBX contains location of fbInfo)
 	mov esp, [mmap.stack - coreinfo + ecx]
 	add esp, [mmap.stackSize - coreinfo + ecx]
@@ -35,14 +33,17 @@ _start:
 	jmp halt
 
 halt:
+	cli 
+
+	.loop:
 	hlt
-	jmp halt
+	jmp .loop
 
 font: incbin "Inconsolata-16b.psf" 
 
 %include "kernel/core/memory.asm"
+%include "kernel/core/interrupts.asm"
+%include "kernel/core/io.asm"
 %include "structures/coreinfo.asm"
-%include "structures/gdt.asm"
-
-	;times kernelSize-($-$$) db 0
+;times kernelSize-($-$$) db 0
 

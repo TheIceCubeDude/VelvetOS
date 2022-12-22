@@ -21,6 +21,7 @@ static struct memoryMap *mmap;
 static struct framebufferInfo *fbInfo;
 
 void kpanic(uint8_t* cause) {
+	disableIrqs();
 	setTextColours(0x00FF0000, 0x00FFFFFF);
 	printf("Kernel Panic!!!");
 	setTextColours(0x00A00000, 0x00FFFFFF);
@@ -64,9 +65,7 @@ extern void kmain(struct memoryMap *mmapParam, struct framebufferInfo *fbInfoPar
 
 	//Init graphics
 	videoInit(fbInfo->framebufferWidth, fbInfo->framebufferHeight, fbInfo->framebufferBPL, fbInfo->framebufferSize, fbInfo->framebuffer);
-	loadFont((void*) ((uint32_t)mmap->kernel + (uint32_t)font));
-	consoleInit(fbInfo->framebufferWidth, fbInfo->framebufferHeight);
-	
+	consoleInit((void*) ((uint32_t)mmap->kernel + (uint32_t)font));
 	_singleBufPrint();
 	if(!enableSSE()) {kpanic("CPU does not support SSE 2.0");}
 	printf("SSE enabled.");
@@ -78,6 +77,10 @@ extern void kmain(struct memoryMap *mmapParam, struct framebufferInfo *fbInfoPar
 	printf("SSE enabled.");
 	printf("Double buffering enabled.");
 
+	//Init interrupts
+	idtInit();
+	printf("Interrupts have been set up.");
 	kpanic("OS halted.");
+	enableIrqs();
 	return;
 }

@@ -2,3 +2,4 @@
 #include "../video/include.h"
 #include "kernel.c"
 #include "heap.c"
+#include "interrupts.c"
