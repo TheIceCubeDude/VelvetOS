@@ -57,6 +57,18 @@ void _singleBufPrint() {
 	return;
 }
 
+void playTheme() {
+	uint16_t frequency[] = {659.25511, 493.8833, 523.25113, 587.32954, 523.25113, 493.8833, 440.0, 440.0, 523.25113, 659.25511, 587.32954, 523.25113, 493.8833, 523.25113, 587.32954, 659.25511, 523.25113, 440.0, 440.0, 440.0, 493.8833, 523.25113, 587.32954, 698.45646, 880.0, 783.99087, 698.45646, 659.25511, 523.25113, 659.25511, 587.32954, 523.25113, 493.8833, 493.8833, 523.25113, 587.32954, 659.25511, 523.25113, 440.0, 440.0};
+	uint16_t duration[] = {406.250, 203.125, 203.125, 406.250, 203.125, 203.125, 406.250, 203.125, 203.125, 406.250, 203.125, 203.125, 609.375, 203.125, 406.250, 406.250, 406.250, 406.250, 203.125, 203.125, 203.125, 203.125, 609.375, 203.125, 406.250, 203.125, 203.125, 609.375, 203.125, 406.250, 203.125, 203.125, 406.250, 203.125, 203.125, 406.250, 406.250, 406.250, 406.250, 406.250};
+
+	//Arrays of data from https://www.jk-quantized.com/blog/2013/11/22/tetris-theme-song-using-processing
+	for (int i=0; i<40; i++) {
+		playSound(frequency[i], duration[i]);
+	}
+
+	return;
+}
+
 extern void kmain(struct memoryMap *mmapParam, struct framebufferInfo *fbInfoParam, void *font) {
 	//Setup some base stuff
 	mmap = mmapParam;
@@ -85,15 +97,18 @@ extern void kmain(struct memoryMap *mmapParam, struct framebufferInfo *fbInfoPar
 	//Init Programmable Interval Timer
 	initPit();
 	printf("PIT has been set up.");
-	printf("Waiting 3 seconds...");
+	printf("Epic theme in:");
 	enableIrqs();
 	printDec(3);
-	while (getTime()/1000 < 1) {}
+	sleep(1000);
 	printDec(2);
-	while (getTime()/1000 < 2) {}
+	sleep(1000);
 	printDec(1);
-	while (getTime()/1000 < 3) {}
+	sleep(1000);
+	playTheme();
 
 	kpanic("OS halted.");
 	return;
 }
+
+

@@ -22,4 +22,4 @@ truncate -s 1M build/kernel.bin
 cat build/bootloader.bin build/kernel.bin> OS.img
 
 echo Starting QEMU
-qemu-system-i386 -hda OS.img -m 512
+qemu-system-i386 -hda OS.img -m 512 -audiodev id=alsa,driver=alsa -machine pcspk-audiodev=alsa
