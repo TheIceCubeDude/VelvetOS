@@ -3,8 +3,6 @@
 
 static uint8_t port2Exists = 0;
 
-//NOTE: PCI IRQ's must be configured to NOT use IRQ 11 in BIOS (at least on older IBM/Lenovo Thinkpads)
-
 void initPs2() {
 	//Disable first port
 	outb(CONTROL_PORT, 0xAD);
