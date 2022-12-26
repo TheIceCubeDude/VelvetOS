@@ -1,6 +1,7 @@
 #include "include.h"
 #include "../video/include.h"
 #include "../pit/include.h"
+#include "../ps2/include.h"
 #include "kernel.c"
 #include "heap.c"
 #include "interrupts.c"

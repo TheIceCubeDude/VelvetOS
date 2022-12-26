@@ -97,8 +97,28 @@ extern void kmain(struct memoryMap *mmapParam, struct framebufferInfo *fbInfoPar
 	//Init Programmable Interval Timer
 	initPit();
 	printf("PIT has been set up.");
-	printf("Epic theme in:");
+
+	//Init PS/2 controller
+	initPs2();
+	printf("PS/2 hardware initalised.");
 	enableIrqs();
+
+	printf("Enter whenever ready for an epic theme.");
+	uint8_t string[1024] = {'>', 0};
+	uint8_t stringptr = 1;
+	uint8_t ctrl = 1;
+	while (ctrl) {
+		uint8_t keys[32];
+		getNewKeys(keys);
+		for (uint8_t i=0; i<32; i++) {
+			if (keys[i] == '\b' && (!(stringptr == 1))) {stringptr--; string[stringptr] = 0;}
+			else if (keys[i] == '\n') {ctrl = 0;}
+			else if (keys[i]) {string[stringptr] = keys[i]; stringptr++;}
+		}
+		printf(string);
+	}
+
+	printf("Epic theme in:");
 	printDec(3);
 	sleep(1000);
 	printDec(2);

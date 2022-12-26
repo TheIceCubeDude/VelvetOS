@@ -12,9 +12,10 @@ echo Compiling kernel
 i686-elf-gcc -c -ffreestanding -fPIE -mgeneral-regs-only -o build/kernel/core.o kernel/core/core.c
 i686-elf-gcc -c -ffreestanding -fPIE -o build/kernel/video.o kernel/video/video.c
 i686-elf-gcc -c -ffreestanding -fPIE -mgeneral-regs-only -o build/kernel/pit.o kernel/pit/pit.c
+i686-elf-gcc -c -ffreestanding -fPIE -mgeneral-regs-only -Wno-multichar -o build/kernel/ps2.o kernel/ps2/ps2.c
 
 echo Linking kernel
-i686-elf-gcc -T script.ld -nostdlib -lgcc -o build/kernel.elf build/kernel/main.o build/kernel/core.o build/kernel/video.o build/kernel/pit.o
+i686-elf-gcc -T script.ld -nostdlib -lgcc -o build/kernel.elf build/kernel/main.o build/kernel/core.o build/kernel/video.o build/kernel/pit.o build/kernel/ps2.o
 
 echo Creating final image
 i686-elf-objcopy -O binary build/kernel.elf build/kernel.bin
