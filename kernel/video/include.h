@@ -8,7 +8,10 @@ void disableDoubleBuffering();
 void swapBufs();
 
 void consoleInit(void *font);
-void resetCursor();
+void setCursorX(uint16_t x);
+void setCursorY(uint16_t y);
+uint16_t getCursorX();
+uint16_t getCursorY();
 void printf(uint8_t *string);
 void printHex(uint32_t value);
 void printDec(uint32_t value);

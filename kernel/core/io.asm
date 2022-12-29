@@ -5,6 +5,7 @@ global outl
 global inb
 global inw
 global inl
+global insw
 
 io_wait:
 	;; IO is slow, so it can be used as a crude delay
@@ -63,6 +64,19 @@ inl:
 	mov edx, [ebp + 8]
 	in eax, dx
 	mov edx, 0
+	pop ebp
+	ret
+
+insw:
+	push ebp
+	mov ebp, esp
+	push edi
+	cld
+	mov edx, [ebp + 8]
+	mov edi, [ebp + 12]
+	mov ecx, [ebp + 16]
+	rep insw
+	pop edi
 	pop ebp
 	ret
 

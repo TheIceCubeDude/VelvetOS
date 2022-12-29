@@ -37,10 +37,19 @@ void consoleInit(void *font) {
 	return;
 }
 
-void resetCursor() {
-	cursorX = 0;
-	cursorY = 0;
+void setCursorX(uint16_t x) {
+	cursorX = x;
 	return;
+}
+void setCursorY(uint16_t y) {
+	cursorY = y;
+	return;
+}
+uint16_t getCursorX() {
+	return cursorX;
+}
+uint16_t getCursorY() {
+	return cursorY;
 }
 
 void putChar(uint8_t *character, uint16_t x, uint16_t y, uint16_t scalex, uint16_t scaley) {

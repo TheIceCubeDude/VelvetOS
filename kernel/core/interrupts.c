@@ -100,9 +100,9 @@ void reprogramPic() {
 	outb(PIC2_DATA, 1);
 	io_wait();
 
-	//Initalisaton complete, now finally unmask all interrupts so they can all come through
-	outb(PIC1_DATA, 0);
-	outb(PIC2_DATA, 0);
+	//Initalisaton complete, now finally unmask PIT (0), both PS/2 (1&12), CMOS (8) and cascade (2)
+	outb(PIC1_DATA, 0b11111000);
+	outb(PIC2_DATA, 0b11101110);
 	
 	return;
 }

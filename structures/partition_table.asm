@@ -28,5 +28,16 @@ partition_2:
 	.lba:			dd 9
 	.size:			dd 2048
 
-partition_3: times 16 db 0
+partition_3:
+	.attributes: 		db attrib
+	.startingHead:		db 0
+	.startingSector:	db 0
+	.startingCylinder:	db 0
+	.systemID:		db kernelID
+	.endingHead:		db 0
+	.endingSector:		db 0
+	.endingCylinder		db 0
+	.lba:			dd 2058
+	.size:			dd 2048
+
 partition_4: times 16 db 0

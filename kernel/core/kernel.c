@@ -69,6 +69,43 @@ void playTheme() {
 	return;
 }
 
+uint8_t findBootDisks() {
+	uint8_t drives[4];
+	pioGetDrives(drives);
+	uint8_t bootDrives[4] = {0};
+	uint8_t bootDrivesCount = 0;
+	uint8_t selectedDrive;
+	for (uint8_t i=0; i<4; i++) {
+		if (drives[i]) {
+			uint16_t mbr[256];
+			pioReadDisk(0, 0, 1, i, mbr);
+			uint32_t partition3 = mbr[486/2];
+			uint8_t file[512];
+			pioReadDisk(0, partition3, 1, i, (uint16_t*) file);
+			if (*(file + 257) == *"ustar") {bootDrives[i] = 1; bootDrivesCount++; selectedDrive = i;}
+		}
+	}
+	if (!bootDrivesCount) {
+		kpanic("OS was not booted from an ATA drive!");
+	}
+	if (bootDrivesCount > 1) {
+		printf("");
+		printf("NOTE:");
+		printf("Multiple drives contain VelvetOS systems.");
+		printf("Drives available:");
+		for (uint8_t i=0; i<4; i++) {if (bootDrives[i]) {printDec(i);}}
+		printf("Which drive do you want to use for the rootFS? Type number now.");
+		uint8_t keys[32] = {0};
+		while ((!keys[0]) || !(keys[0] < 0x34 && keys[0] >= 0x30 &&  bootDrives[keys[0] - 0x30])) {getPressedKeys(keys);}
+		keys[1] = 0;
+		selectedDrive = keys[0] - 0x30;
+	}
+
+	printf("Boot drive:");
+	printDec(selectedDrive);
+	return selectedDrive;
+}
+
 extern void kmain(struct memoryMap *mmapParam, struct framebufferInfo *fbInfoParam, void *font) {
 	//Setup some base stuff
 	mmap = mmapParam;
@@ -83,7 +120,8 @@ extern void kmain(struct memoryMap *mmapParam, struct framebufferInfo *fbInfoPar
 	if(!enableSSE()) {kpanic("CPU does not support SSE 2.0");}
 	printf("SSE enabled.");
 	enableDoubleBuffering();
-	resetCursor();
+	setCursorX(0);
+	setCursorY(0);
 	//Print stuff from before to get framebuf contents into backbuf
 	//(we can't copy from framebuf to backbuf because it is sloooow)
 	_singleBufPrint();
@@ -98,25 +136,39 @@ extern void kmain(struct memoryMap *mmapParam, struct framebufferInfo *fbInfoPar
 	initPit();
 	printf("PIT has been set up.");
 
-	//Init PS/2 controller
+	//Init PS/2 controller, ports and devices
 	initPs2();
 	printf("PS/2 hardware initalised.");
 	enableIrqs();
 
-	printf("Enter whenever ready for an epic theme.");
+	//Init ATA hard disks for PIO mode, and check there is a valid ustar fs on the 3rd partition of one of them
+	initAtaPio();
+	printf("ATA hard disks initalised for PIO mode.");
+	uint8_t bootDisk = findBootDisks();
+
+	printf("Select program to load.");
 	uint8_t string[1024] = {'>', 0};
 	uint8_t stringptr = 1;
 	uint8_t ctrl = 1;
+	setCursorY(getCursorY() + 1);
 	while (ctrl) {
+		setCursorY(getCursorY() - 1);
+		printf(string);
 		uint8_t keys[32];
 		getNewKeys(keys);
 		for (uint8_t i=0; i<32; i++) {
-			if (keys[i] == '\b' && (!(stringptr == 1))) {stringptr--; string[stringptr] = 0;}
-			else if (keys[i] == '\n') {ctrl = 0;}
-			else if (keys[i]) {string[stringptr] = keys[i]; stringptr++;}
+			if (keys[i] == '\b' && (!(stringptr == 1))) {stringptr--;}
+			else if (keys[i] == '\n') {ctrl = 0; setCursorY(getCursorY() + 1);}
+			else if (keys[i] && !(keys[i] == '\b')) {string[stringptr] = keys[i]; stringptr++;}
 		}
-		printf(string);
+		string[stringptr] = '_';
+		string [stringptr + 1] = ' ';
 	}
+	setCursorY(getCursorY() - 1);
+	string[stringptr] = 0;
+	string[stringptr + 1] = 0;
+	//uint16_t write[256] = {1,2,3,4,5};
+	//pioWriteDisk(0,0,1,0, write);
 
 	printf("Epic theme in:");
 	printDec(3);
