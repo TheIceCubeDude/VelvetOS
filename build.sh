@@ -19,7 +19,7 @@ echo Linking kernel
 i686-elf-gcc -T script.ld -nostdlib -lgcc -o build/kernel.elf build/kernel/main.o build/kernel/core.o build/kernel/video.o build/kernel/pit.o build/kernel/ps2.o build/kernel/disk.o
 
 echo Creating rootFS
-tar -H ustar -cf build/rootfs.tar rootfs
+tar -H ustar -cf build/rootfs.tar '|'
 
 echo Creating final image
 i686-elf-objcopy -O binary build/kernel.elf build/kernel.bin

@@ -37,7 +37,7 @@ partition_3:
 	.endingHead:		db 0
 	.endingSector:		db 0
 	.endingCylinder		db 0
-	.lba:			dd 2058
+	.lba:			dd 2057
 	.size:			dd 2048
 
 partition_4: times 16 db 0

@@ -103,13 +103,75 @@ uint8_t findBootDisks() {
 
 	printf("Boot drive:");
 	printDec(selectedDrive);
+
+	uint16_t mbr[256];
+	pioReadDisk(0, 0, 1, selectedDrive, mbr);
+	uint32_t partition3 = mbr[486/2];
+	ustarSetDisk(selectedDrive);
+	ustarSetStart(partition3);
+
 	return selectedDrive;
+}
+
+void loadGenesis() {
+	uint8_t bootDisk = findBootDisks();
+	FILE genesis = ustarFindFile("|/genesis.ebin");
+	if (!genesis.location) {
+		printf("\'genesis.ebin\' not found! Select program to load.");
+		uint8_t string[100] = {'>', '|', '/', 0};
+		uint8_t stringptr = 3;
+		uint8_t ctrl = 1;
+		setCursorY(getCursorY() + 1);
+		while (ctrl) {
+			setCursorY(getCursorY() - 1);
+			printf(string);
+			uint8_t keys[32];
+			getNewKeys(keys);
+			for (uint8_t i=0; i<32; i++) {
+				if (keys[i] == '\b' && (!(stringptr == 1))) {stringptr--;}
+				else if (keys[i] == '\n') {ctrl = 0; setCursorY(getCursorY() + 1);}
+				else if (keys[i] && !(keys[i] == '\b')) {string[stringptr] = keys[i]; stringptr++;}
+			}
+			string[stringptr] = '_';
+			string [stringptr + 1] = ' ';
+		}
+		setCursorY(getCursorY() - 1);
+		string[stringptr] = 0;
+		string[stringptr + 1] = 0;
+		
+		genesis = ustarFindFile(string+1);
+		if (genesis.type == 5) {
+			printf("That is a directory! Contents:");
+			uint32_t i = 0;
+			while (1)  {
+				uint8_t *item = ustarGetDirectoryContents(string+1, i);
+				if (!item) {break;}
+				printf(item);
+				free(item);
+				i++;
+			}
+			printf("Reboot to retry.");
+			halt();
+		}
+		if (!genesis.location) {printf("File does not exist! (Remember: directories must end in \'/\', and if you enter in a directory its contents will be shown. Reboot to retry."); halt();}
+	}
+	setHeap(mmap->code);
+	uint8_t *buf = malloc(genesis.size + ((4 - genesis.size % 4)));
+	if (!buf) {kpanic("Not enough memory to load genesis program!");}
+	setHeap(mmap->heap);
+	ustarReadFile(genesis, buf);
+	typedef void entry (void);
+	entry *code = (entry*) buf;
+	code();
+	return;
 }
 
 extern void kmain(struct memoryMap *mmapParam, struct framebufferInfo *fbInfoParam, void *font) {
 	//Setup some base stuff
 	mmap = mmapParam;
 	fbInfo = fbInfoParam;
+	setHeap(mmap->code);
+	makeHeap(mmap->codeSize);
 	setHeap(mmap->heap);
 	makeHeap(mmap->heapSize);
 
@@ -144,31 +206,9 @@ extern void kmain(struct memoryMap *mmapParam, struct framebufferInfo *fbInfoPar
 	//Init ATA hard disks for PIO mode, and check there is a valid ustar fs on the 3rd partition of one of them
 	initAtaPio();
 	printf("ATA hard disks initalised for PIO mode.");
-	uint8_t bootDisk = findBootDisks();
 
-	printf("Select program to load.");
-	uint8_t string[1024] = {'>', 0};
-	uint8_t stringptr = 1;
-	uint8_t ctrl = 1;
-	setCursorY(getCursorY() + 1);
-	while (ctrl) {
-		setCursorY(getCursorY() - 1);
-		printf(string);
-		uint8_t keys[32];
-		getNewKeys(keys);
-		for (uint8_t i=0; i<32; i++) {
-			if (keys[i] == '\b' && (!(stringptr == 1))) {stringptr--;}
-			else if (keys[i] == '\n') {ctrl = 0; setCursorY(getCursorY() + 1);}
-			else if (keys[i] && !(keys[i] == '\b')) {string[stringptr] = keys[i]; stringptr++;}
-		}
-		string[stringptr] = '_';
-		string [stringptr + 1] = ' ';
-	}
-	setCursorY(getCursorY() - 1);
-	string[stringptr] = 0;
-	string[stringptr + 1] = 0;
-	//uint16_t write[256] = {1,2,3,4,5};
-	//pioWriteDisk(0,0,1,0, write);
+	printf("Executing genesis program...");
+	loadGenesis();
 
 	printf("Epic theme in:");
 	printDec(3);
