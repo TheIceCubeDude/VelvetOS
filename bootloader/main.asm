@@ -21,7 +21,6 @@ main:
 	
 	call A20_enable
 	call mMap_prepareMemory
-	call mMap_enterUnrealMode
 	pop dx
 	call mMap_loadKernel
 	call mMap_relocateCoreinfo

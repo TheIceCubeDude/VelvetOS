@@ -58,6 +58,8 @@ mMap_loadKernel:
 	push dx
 	call .loadFragment
 	;; Now copy the fragment in tmp to final destination
+	;; Use unreal mode to access > 1MB, but BIOS call *may* reload DS (disabling unreal mode) so we have to do it every iteration
+	call mMap_enterUnrealMode
 	;; Firstly, get the base location
         mov eax, [mmap.kernel]
 	;; Now calculate Counter * 4KB to give us offset
