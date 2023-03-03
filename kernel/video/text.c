@@ -15,7 +15,7 @@ static uint32_t fgColour;
 
 static uint16_t cursorX = 0;
 static uint16_t cursorY = 0;
-static const uint16_t CONSOLE_WIDTH = 64;
+static const uint16_t CONSOLE_WIDTH = 128;
 static const uint16_t CONSOLE_HEIGHT = 32;
 static uint16_t CONSOLE_SCALE_X;
 static uint16_t CONSOLE_SCALE_Y;

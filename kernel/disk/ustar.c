@@ -7,8 +7,11 @@ void ustarReadFile(FILE file, void *buf) {
 	uint32_t size = 0;
 	if (file.size % 512) {size++;};
 	size += file.size/512;
-	//Get file data
-	pioReadDisk(0, file.location + 1, size, disk,  buf);
+	//Get file data (discard empty data because it is rounded up to the nearest sector)
+	void* tmpBuf = malloc(size*512);
+	pioReadDisk(0, file.location + 1, size, disk, tmpBuf);
+	memcpy(buf, tmpBuf, file.size);
+	free(tmpBuf);
 	return;
 }
 

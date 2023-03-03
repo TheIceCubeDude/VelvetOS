@@ -55,6 +55,24 @@ void idtInit() {
 	return;
 }
 
+void reboot() {
+	//Triple fault CPU by loading an IDTR of 0 size
+	for(uint8_t i=0; i<10; i++) {
+		setTextColours(0x00A0A0A0, 0x00FFFF00);
+		fillScreen(0x000000FF);
+		setCursorX(58);
+		setCursorY(16);
+		printf("REBOOTING...");
+		setTextColours(0x0000FF00, 0x000000FF);
+		fillScreen(0x00FFFF00);
+		setCursorX(58);
+		setCursorY(16);
+		printf("REBOOTING...");
+	}
+	idtr.size = 0;
+	loadIdt(&idtr);
+}
+
 void addInterrupt(uint8_t vector, uint8_t attributes, void *address) {
 	struct idtEntry *vectorEntry = idt + vector;
 	vectorEntry->offsetLow = (uint16_t)((uint32_t) address);
@@ -109,7 +127,9 @@ void reprogramPic() {
 
 __attribute__ ((interrupt))
 void generalExceptionHandler(struct interruptFrame *frame) {
-	printf("A general exception has occured!");
+	printf("A general exception has occured at:");
+	printHex(frame->eip);
+	halt();
 	return;
 }
 

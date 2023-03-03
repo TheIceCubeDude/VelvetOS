@@ -18,8 +18,9 @@ static const uint8_t scancodeTable[] = {	0x0E, 0x16, 0x1E, 0x26, 0x25, 0x2E, 0x3
 						0x1C, 0x1B, 0x23, 0x2B, 0x34, 0x33, 0x3B, 0x42, 0x4B, 0x4C, 0x52, 0x5D,
 						0x61, 0x1A, 0x22, 0x21, 0x2A, 0x32, 0x31, 0x3A, 0x41, 0x49, 0x4A,
 						0x29};
-
 static uint8_t shift = 0;
+static uint8_t ctrl = 0;
+static uint8_t alt = 0;
 static uint8_t shiftLock = 0;
 static uint8_t pressed = 1;
 
@@ -32,6 +33,21 @@ void keyboardIrq() {
 		case 0xF0:
 			//Key released
 			pressed = 0;
+			return;
+			
+		case 0x71:
+			//Delete Key (only used for reboot atm)
+			if (pressed && ctrl && alt) {reboot();}
+			return;
+
+		case 0x14:
+			//Ctrl key (only used for reboot atm)
+			if (!pressed) {ctrl = 0; pressed = 1;} else {ctrl = 1;}
+			return;
+
+		case 0x11:
+			//Alt key (only used for reboot atm)
+			if (!pressed) {alt = 0; pressed = 1;} else {alt = 1;}
 			return;
 
 		case 0x12:

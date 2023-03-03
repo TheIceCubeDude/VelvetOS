@@ -25,6 +25,24 @@ uint16_t inw(uint16_t port);
 uint32_t inl(uint16_t port);
 void insw(uint16_t port, void *buf, uint32_t size);
 
+//Scheduling
+struct process {
+	void *code;
+	uint32_t codeSize;
+	uint32_t stackSize;
+	uint8_t padding;
+	void *stackPtr;
+	uint8_t pltResolved;
+	struct process *nextProc;
+};
+struct process* addProcess(uint32_t codeSize, uint32_t stackSize);
+void _resolvePlt(struct process *process);
+void destroyProcess(struct process *proc);
+void exitKernel();
+void yield();
+void* getNextProcess(void *stackPtr);
+void exitKernelAsm(void *stackPtr);
+
 //Interrupts
 #define TRAP_ATTRIBUTES 0b10001111 
 #define INTERRUPT_ATTRIBUTES 0b10001110
@@ -41,6 +59,7 @@ struct interruptFrame {
 	uint32_t ss;
 };
 void idtInit();
+void reboot();
 void addInterrupt(uint8_t vector, uint8_t attributes, void *address);
 void reprogramPic();
 void loadIdt(void *idtr);

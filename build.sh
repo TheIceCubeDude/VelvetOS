@@ -18,6 +18,14 @@ i686-elf-gcc -c -ffreestanding -fPIE -o build/kernel/disk.o kernel/disk/disk.c
 echo Linking kernel
 i686-elf-gcc -T script.ld -nostdlib -lgcc -o build/kernel.elf build/kernel/main.o build/kernel/core.o build/kernel/video.o build/kernel/pit.o build/kernel/ps2.o build/kernel/disk.o
 
+echo Compiling, assembling and linking OS programs and devel libs
+#nasm -f elf -o OS_programs/libsyscall.a OS_programs/libsyscall.asm
+#i686-elf-gcc -c -ffreestanding -fPIE -mgeneral-regs-only -o build/OS_programs/genesis.o OS_programs/genesis.c
+#i686-elf-gcc -T script.ld -nostdlib -lgcc -LOS_programs -lsyscall -o build/OS_programs/genesis.elf build/OS_programs/genesis.o
+nasm -f bin -o '|/genesis.ebin'  'OS_programs/genesis.asm'
+nasm -f bin -o '|/tetrisTheme.ebin'  'OS_programs/tetrisTheme.asm'
+#i686-elf-objcopy -O binary -j .text -j .data -j .rodata -j .bss -j .plt build/OS_programs/genesis.elf '|/genesis.ebin'
+
 echo Creating rootFS
 tar -H ustar -cf build/rootfs.tar '|'
 

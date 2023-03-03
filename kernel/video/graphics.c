@@ -69,6 +69,6 @@ void swapBufs() {
 
 void _scrollY(uint16_t scale) {
 	memcpy(framebuffer, ((char*)framebuffer) + (scale * BPL), size - (scale * BPL));
-	memset((char*)framebuffer + size - (scale * BPL), 0, scale * BPL);
+	memset((char*)framebuffer + size - (scale * BPL), bgColour, scale * BPL);
 	return;
 }

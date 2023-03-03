@@ -33,17 +33,15 @@ _start:
 	jmp halt
 
 halt:
-	cli 
-
-	.loop:
 	hlt
-	jmp .loop
+	jmp halt
 
 font: incbin "Inconsolata-16b.psf" 
 
 %include "kernel/core/memory.asm"
 %include "kernel/core/interrupts.asm"
 %include "kernel/core/io.asm"
+%include "kernel/core/scheduler.asm"
 %include "structures/coreinfo.asm"
 ;times kernelSize-($-$$) db 0
 

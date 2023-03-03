@@ -5,4 +5,5 @@
 #include "../disk/include.h"
 #include "kernel.c"
 #include "heap.c"
+#include "scheduler.c"
 #include "interrupts.c"

@@ -1,3 +1,4 @@
+static uint32_t bgColour;
 void videoInit(uint16_t fbWidth, uint16_t fbhHeight, uint16_t fbBPL, uint32_t fbSize, uint32_t *fb);
 void putPixel(uint16_t x, uint16_t y, uint32_t colour);
 uint32_t getPixel(uint16_t x, uint16_t y);

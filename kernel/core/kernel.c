@@ -21,7 +21,7 @@ static struct memoryMap *mmap;
 static struct framebufferInfo *fbInfo;
 
 void kpanic(uint8_t* cause) {
-	disableIrqs();
+	//disableIrqs();
 	setTextColours(0x00FF0000, 0x00FFFFFF);
 	printf("Kernel Panic!!!");
 	setTextColours(0x00A00000, 0x00FFFFFF);
@@ -54,18 +54,6 @@ void _singleBufPrint() {
 	printf("VelvetOS v0.1 kernel now booting...");
 	setTextColours(0x00472F1F, 0x00FFAF00);
 	printf("Core graphics loaded.");
-	return;
-}
-
-void playTheme() {
-	uint16_t frequency[] = {659.25511, 493.8833, 523.25113, 587.32954, 523.25113, 493.8833, 440.0, 440.0, 523.25113, 659.25511, 587.32954, 523.25113, 493.8833, 523.25113, 587.32954, 659.25511, 523.25113, 440.0, 440.0, 440.0, 493.8833, 523.25113, 587.32954, 698.45646, 880.0, 783.99087, 698.45646, 659.25511, 523.25113, 659.25511, 587.32954, 523.25113, 493.8833, 493.8833, 523.25113, 587.32954, 659.25511, 523.25113, 440.0, 440.0};
-	uint16_t duration[] = {406.250, 203.125, 203.125, 406.250, 203.125, 203.125, 406.250, 203.125, 203.125, 406.250, 203.125, 203.125, 609.375, 203.125, 406.250, 406.250, 406.250, 406.250, 203.125, 203.125, 203.125, 203.125, 609.375, 203.125, 406.250, 203.125, 203.125, 609.375, 203.125, 406.250, 203.125, 203.125, 406.250, 203.125, 203.125, 406.250, 406.250, 406.250, 406.250, 406.250};
-
-	//Arrays of data from https://www.jk-quantized.com/blog/2013/11/22/tetris-theme-song-using-processing
-	for (int i=0; i<40; i++) {
-		playSound(frequency[i], duration[i]);
-	}
-
 	return;
 }
 
@@ -155,15 +143,15 @@ void loadGenesis() {
 		}
 		if (!genesis.location) {printf("File does not exist! (Remember: directories must end in \'/\', and if you enter in a directory its contents will be shown. Reboot to retry."); halt();}
 	}
-	setHeap(mmap->code);
-	uint8_t *buf = malloc(genesis.size + ((4 - genesis.size % 4)));
-	if (!buf) {kpanic("Not enough memory to load genesis program!");}
-	setHeap(mmap->heap);
-	ustarReadFile(genesis, buf);
-	typedef void entry (void);
-	entry *code = (entry*) buf;
-	code();
-	return;
+	struct process *genesisProcess = addProcess(genesis.size, 4096);
+	if (!genesisProcess) {kpanic("Not enough memory to load genesis program!");}
+	ustarReadFile(genesis, genesisProcess->code);
+
+	//Test more than 1 proc
+	FILE test = ustarFindFile("|/tetrisTheme.ebin");
+	struct process *testProcess = addProcess(test.size, 4096);
+	if (!testProcess) {kpanic("Not enough memory to load test program!");}
+	ustarReadFile(test, testProcess->code);
 }
 
 extern void kmain(struct memoryMap *mmapParam, struct framebufferInfo *fbInfoParam, void *font) {
@@ -184,6 +172,7 @@ extern void kmain(struct memoryMap *mmapParam, struct framebufferInfo *fbInfoPar
 	enableDoubleBuffering();
 	setCursorX(0);
 	setCursorY(0);
+	fillScreen(0x00472F1F);
 	//Print stuff from before to get framebuf contents into backbuf
 	//(we can't copy from framebuf to backbuf because it is sloooow)
 	_singleBufPrint();
@@ -193,7 +182,6 @@ extern void kmain(struct memoryMap *mmapParam, struct framebufferInfo *fbInfoPar
 	//Init interrupts
 	idtInit();
 	printf("Interrupts have been set up.");
-
 	//Init Programmable Interval Timer
 	initPit();
 	printf("PIT has been set up.");
@@ -209,18 +197,7 @@ extern void kmain(struct memoryMap *mmapParam, struct framebufferInfo *fbInfoPar
 
 	printf("Executing genesis program...");
 	loadGenesis();
-
-	printf("Epic theme in:");
-	printDec(3);
-	sleep(1000);
-	printDec(2);
-	sleep(1000);
-	printDec(1);
-	sleep(1000);
-	playTheme();
-
-	kpanic("OS halted.");
-	return;
+	exitKernel();
 }
 
 

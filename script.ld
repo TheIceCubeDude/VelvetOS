@@ -9,5 +9,7 @@ SECTIONS
 	.rodata : ALIGN(4){*(.rodata) }
 	.data : ALIGN(4) {*(.data) }
 	.bss  : ALIGN(4) {*(.bss)  }
-	.got : { _GLOBAL_OFFSET_TABLE_ = .; *(.got) }
+	.got : ALIGN(4) { _GLOBAL_OFFSET_TABLE_ = .;
+	       		 *(.got) }
+	.plt : {*(.plt) }
 }
