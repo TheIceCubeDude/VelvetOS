@@ -10,13 +10,14 @@ echo Compiling kernel
 # Every [kernel_module.c] should include the core module's [include.h] - [../core/include.h].
 # Every [kernel_module.c] should include its own [include.h], which is useful if it uses assembly routines defined in a c prototype.
 i686-elf-gcc -c -ffreestanding -fPIE -mgeneral-regs-only -o build/kernel/core.o kernel/core/core.c
+i686-elf-gcc -c -ffreestanding -fPIE -o build/kernel/plt_funcs.o kernel/core/plt_funcs.c
 i686-elf-gcc -c -ffreestanding -fPIE -o build/kernel/video.o kernel/video/video.c
 i686-elf-gcc -c -ffreestanding -fPIE -mgeneral-regs-only -o build/kernel/pit.o kernel/pit/pit.c
 i686-elf-gcc -c -ffreestanding -fPIE -mgeneral-regs-only -Wno-multichar -o build/kernel/ps2.o kernel/ps2/ps2.c
 i686-elf-gcc -c -ffreestanding -fPIE -o build/kernel/disk.o kernel/disk/disk.c
 
 echo Linking kernel
-i686-elf-gcc -T script.ld -nostdlib -lgcc -o build/kernel.elf build/kernel/main.o build/kernel/core.o build/kernel/video.o build/kernel/pit.o build/kernel/ps2.o build/kernel/disk.o
+i686-elf-gcc -T script.ld -nostdlib -lgcc -o build/kernel.elf build/kernel/main.o build/kernel/core.o build/kernel/plt_funcs.o build/kernel/video.o build/kernel/pit.o build/kernel/ps2.o build/kernel/disk.o
 
 echo Compiling, assembling and linking OS programs and devel libs
 #nasm -f elf -o OS_programs/libsyscall.a OS_programs/libsyscall.asm

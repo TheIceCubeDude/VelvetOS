@@ -34,6 +34,7 @@ struct process {
 	void *stackPtr;
 	uint8_t pltResolved;
 	struct process *nextProc;
+	struct process *prevProc;
 };
 struct process* addProcess(uint32_t codeSize, uint32_t stackSize);
 void _resolvePlt(struct process *process);

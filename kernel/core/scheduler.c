@@ -1,3 +1,5 @@
+extern const uint32_t PLT_FUNCS[];
+
 static struct process *firstProc = 0;
 static struct process *lastProc = 0;
 static struct process *currentProc = 0;
@@ -17,41 +19,39 @@ struct process* addProcess(uint32_t codeSize, uint32_t stackSize) {
 	*progStack = (uint32_t)code;
 	for(uint8_t i=0; i<8; i++) {
 		progStack--;
-		if (i==5) {*progStack = (uint32_t)progStack;} //Set ESP to stack
-		else {*progStack = 0xdeadbeef;}
+		*progStack = 0xdeadbeef; //ESP is ignored by popad so this works fine
 	}
 	//Create and return a pointer to the process info
 	struct process *proc = malloc(sizeof(struct process));
-	*proc = (struct process){code, codeSize, stackSize, padding, progStack,  0, 0};
+	*proc = (struct process){code, codeSize, stackSize, padding, progStack,  0, 0, 0};
 	if (lastProc) {lastProc->nextProc = proc;}
+	proc->prevProc = lastProc;
 	lastProc = proc;
 	if (!firstProc) {firstProc = proc;}
 	return proc;
 }
 
 void _resolvePlt(struct process *process) {
-	uint32_t funcs[] = {
-		(((uint32_t) playSound) + ((uint32_t) mmap->kernel)),
-	       	(((uint32_t) printDec) + ((uint32_t) mmap->kernel)),
-	       	(((uint32_t) yield) + ((uint32_t) mmap->kernel))
-	//NOTE: functions in this compilation unit may be resolved to base 1048676. If so, just subtract from 1048576
-	};
 	uint32_t *pltSig = (uint32_t*) ((uint32_t)process->code + process->codeSize - process->padding - 4);
 	uint32_t pltSize = *pltSig + 4;
 	uint32_t *plt = process->code + process->codeSize - process->padding - pltSize; 
 	uint32_t funcIndex = 0;
 	while (plt != pltSig) {
-		printHex(funcs[funcIndex]);
-		*plt = funcs[funcIndex]; 
+		//printHex(((uint32_t*)(((uint32_t)&PLT_FUNCS) + ((uint32_t)mmap->kernel)))[funcIndex] + (uint32_t)mmap->kernel);
+		*plt = ((uint32_t*)(((uint32_t)&PLT_FUNCS) + ((uint32_t)mmap->kernel)))[funcIndex] + (uint32_t)mmap->kernel; 
 		plt++;
 		funcIndex++;
 	}
-	printf("Resolved PLT!");
+	//printf("Resolved PLT!");
 	return;
 }
 
 void destroyProcess(struct process *proc) {
-	//TODO: make the list re link or whatever
+	//Re link list
+	if (!proc->prevProc) {kpanic("Genesis program exited. Ctrl+Alt+Del to reboot.");}
+	if (!proc->nextProc) {lastProc = proc->prevProc;} else {proc->nextProc->prevProc = proc->prevProc;}
+	proc->prevProc->nextProc = proc->nextProc;
+	//Free mem
 	setHeap(mmap->code);
 	free(proc->code);
 	setHeap(mmap->heap);

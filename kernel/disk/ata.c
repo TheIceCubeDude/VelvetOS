@@ -39,10 +39,10 @@ void initAtaPio() {
 	if(inb(SECONDARY_BUS_IO + STATUS_REGISTER) == 0xFF) {drivesAvailable[2] = 0; drivesAvailable[3] = 0;}
 
 	//Proper check for hard drives using IDENTIFY command
-	if (drivesAvailable[0] && (!pioCheckDrive(PRIMARY_BUS_IO, MASTER_DRIVE_IDENTIFY))) {drivesAvailable[0] = 0;}
-	if (drivesAvailable[1] && (!pioCheckDrive(PRIMARY_BUS_IO, SLAVE_DRIVE_IDENTIFY))) {drivesAvailable[1] = 0;}
-	if (drivesAvailable[2] && (!pioCheckDrive(SECONDARY_BUS_IO, MASTER_DRIVE_IDENTIFY))) {drivesAvailable[2] = 0;}
-	if (drivesAvailable[3] && (!pioCheckDrive(SECONDARY_BUS_IO, SLAVE_DRIVE_IDENTIFY))) {drivesAvailable[3] = 0;}
+	if (drivesAvailable[0] && (!_pioCheckDrive(PRIMARY_BUS_IO, MASTER_DRIVE_IDENTIFY))) {drivesAvailable[0] = 0;}
+	if (drivesAvailable[1] && (!_pioCheckDrive(PRIMARY_BUS_IO, SLAVE_DRIVE_IDENTIFY))) {drivesAvailable[1] = 0;}
+	if (drivesAvailable[2] && (!_pioCheckDrive(SECONDARY_BUS_IO, MASTER_DRIVE_IDENTIFY))) {drivesAvailable[2] = 0;}
+	if (drivesAvailable[3] && (!_pioCheckDrive(SECONDARY_BUS_IO, SLAVE_DRIVE_IDENTIFY))) {drivesAvailable[3] = 0;}
 
 	return;
 }
@@ -130,7 +130,7 @@ void pioGetDrives(uint8_t *buf) {
 }	
 
 //Check if a drive supports 48bit ATA LBA PIO mode
-uint8_t pioCheckDrive(uint16_t bus, uint8_t drive) {
+uint8_t _pioCheckDrive(uint16_t bus, uint8_t drive) {
 	uint16_t buf[256];
 	//Issue command
 	outb(bus + DRIVE_REGISTER, drive);

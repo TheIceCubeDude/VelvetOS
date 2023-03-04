@@ -46,10 +46,15 @@ main:
 	ret
 	
 	.end:
+	mov eax, str0
+	add eax, ebx
+	push eax
+	call [printf + ebx]
 	cli
 	hlt
 
 SECTION .data
+str0: db "Finished!", 0
 counter: dd 0
 ;;Arrays of data from https://www.jk-quantized.com/blog/2013/11/22/tetris-theme-song-using-processing
 frequency: dd 659, 493, 523, 587, 523, 493, 440, 440, 523, 659, 587, 523, 493, 523, 587, 659, 523, 440, 440, 440, 493, 523, 587, 698, 880, 783, 698, 659, 523, 659, 587, 523, 493, 493, 523, 587, 659, 523, 440, 440 

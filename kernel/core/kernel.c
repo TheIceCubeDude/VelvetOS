@@ -152,6 +152,7 @@ void loadGenesis() {
 	struct process *testProcess = addProcess(test.size, 4096);
 	if (!testProcess) {kpanic("Not enough memory to load test program!");}
 	ustarReadFile(test, testProcess->code);
+	return;
 }
 
 extern void kmain(struct memoryMap *mmapParam, struct framebufferInfo *fbInfoParam, void *font) {
